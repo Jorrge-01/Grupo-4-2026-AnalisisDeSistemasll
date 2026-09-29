@@ -110,6 +110,43 @@
         string? Correccion,
         List<ArchivoResponse> Archivos
     );
+    public record CasoAdminResponse(
+    int Id,
+    string Codigo,
+    string Area,
+    string Aldea,
+    string Direccion,
+    string Descripcion,
+    DateTime FechaRegistro,
+    string Estado,
+    string? Analista
+);
+    public record HistorialItemResponse(string Tipo, DateTime Fecha, string? Actor, string? Detalle);
+
+    public record CasoAdminDetalleResponse(
+        int Id,
+        string Codigo,
+        string Area,
+        string Aldea,
+        string Direccion,
+        string TelefonoContacto,
+        string Descripcion,
+        DateTime FechaRegistro,
+        string Estado,
+        string? Vecino,
+        string? Analista,
+        string? Operario,
+        List<ArchivoResponse> Archivos,
+        List<HistorialItemResponse> Historial
+    );
+
+    public record CasoSolucionResponse(
+    string Codigo,
+    string Estado,
+    string? ResultadoTrabajo,
+    DateTime? FechaTrabajo,
+    List<ArchivoResponse> Archivos
+);
     public record RegistrarTrabajoRequest(string Resultado);
     public record SolicitarCorreccionRequest(string Correccion);
 }

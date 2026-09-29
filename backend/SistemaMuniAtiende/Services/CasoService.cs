@@ -657,46 +657,7 @@ namespace SistemaMuniAtiende.Services
             return (true, "El trabajo fue iniciado correctamente.");
         }
 
-        public async Task<(bool Exito, string Mensaje)> RegistrarTrabajoAsync(int casoId, string operarioId, RegistrarTrabajoRequest request)
-        {
-            if (string.IsNullOrWhiteSpace(request.Resultado))
-                return (false, "Debe indicar el resultado del trabajo realizado.");
-
-            if (request.Resultado.Length > 2000)
-                return (false, "El resultado no puede superar los 2000 caracteres.");
-
-            var caso = await _context.Casos.FirstOrDefaultAsync(c => c.Id == casoId);
-
-            if (caso == null)
-                return (false, "El caso no existe.");
-
-            var instruccion = await _context.InstruccionesTrabajo
-                .FirstOrDefaultAsync(i =>
-                    i.CasoId == casoId &&
-                    i.OperarioId == operarioId);
-
-            if (instruccion == null)
-                return (false, "El caso no está asignado a este operario.");
-
-            if (caso.Estado != EstadoCaso.EnEjecucion)
-                return (false, "El caso no se encuentra en ejecución.");
-
-            var trabajo = new TrabajoCaso
-            {
-                CasoId = casoId,
-                OperarioId = operarioId,
-                Resultado = request.Resultado.Trim(),
-                FechaRegistro = DateTime.UtcNow
-            };
-
-            _context.TrabajosCaso.Add(trabajo);
-
-            caso.Estado = EstadoCaso.EnVerificacion;
-
-            await _context.SaveChangesAsync();
-
-            return (true, "El trabajo fue registrado correctamente y el caso pasó a verificación.");
-        }
+     
 
         public async Task<(bool Exito, string Mensaje)> AprobarTrabajoAsync(int casoId, string analistaId)
         {
@@ -896,6 +857,195 @@ namespace SistemaMuniAtiende.Services
                     c.Estado.ToString()
                 ))
                 .ToListAsync();
+        }
+
+        public async Task<List<CasoAdminResponse>> ObtenerTodosLosCasosAsync()
+        {
+            return await _context.Casos
+                .AsNoTracking()
+                .Include(c => c.Area)
+                .Include(c => c.Aldea)
+                .Include(c => c.Analista)
+                .OrderByDescending(c => c.FechaRegistro)
+                .Select(c => new CasoAdminResponse(
+                    c.Id,
+                    c.Codigo,
+                    c.Area != null ? c.Area.Nombre : "",
+                    c.Aldea != null ? c.Aldea.Nombre : "",
+                    c.Direccion,
+                    c.Descripcion,
+                    c.FechaRegistro,
+                    c.Estado.ToString(),
+                    c.Analista != null ? c.Analista.Nombre + " " + c.Analista.Apellido : null
+                ))
+                .ToListAsync();
+        }
+
+        public async Task<CasoAdminDetalleResponse?> ObtenerDetalleAdminAsync(int casoId)
+        {
+            var caso = await _context.Casos
+                .Include(c => c.Area)
+                .Include(c => c.Aldea)
+                .Include(c => c.Vecino)
+                .Include(c => c.Analista)
+                .FirstOrDefaultAsync(c => c.Id == casoId);
+
+            if (caso == null)
+                return null;
+
+            var archivos = await _context.ArchivosCaso
+                .Where(a => a.CasoId == casoId)
+                .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido))
+                .ToListAsync();
+
+            var solicitudesInfo = await _context.SolicitudesInformacionCaso
+                .Where(s => s.CasoId == casoId)
+                .OrderBy(s => s.FechaSolicitud)
+                .ToListAsync();
+
+            var instruccion = await _context.InstruccionesTrabajo
+                .FirstOrDefaultAsync(i => i.CasoId == casoId);
+
+            var trabajos = await _context.TrabajosCaso
+                .Where(t => t.CasoId == casoId)
+                .OrderBy(t => t.FechaRegistro)
+                .ToListAsync();
+
+            var correcciones = await _context.SolicitudesCorreccionTrabajo
+                .Where(s => s.CasoId == casoId)
+                .OrderBy(s => s.FechaSolicitud)
+                .ToListAsync();
+
+            string? operarioNombre = null;
+            if (instruccion != null)
+            {
+                var operario = await _userManager.FindByIdAsync(instruccion.OperarioId);
+                if (operario != null)
+                    operarioNombre = $"{operario.Nombre} {operario.Apellido}";
+            }
+
+            var vecinoNombre = caso.Vecino != null ? $"{caso.Vecino.Nombre} {caso.Vecino.Apellido}" : null;
+            var analistaNombre = caso.Analista != null ? $"{caso.Analista.Nombre} {caso.Analista.Apellido}" : null;
+
+            var historial = new List<HistorialItemResponse>
+    {
+        new HistorialItemResponse("Registro", caso.FechaRegistro, vecinoNombre, "El vecino registró el caso.")
+    };
+
+            if (analistaNombre != null)
+                historial.Add(new HistorialItemResponse("Asignación", caso.FechaRegistro, null, $"Asignado al analista {analistaNombre}."));
+
+            foreach (var solicitud in solicitudesInfo)
+            {
+                historial.Add(new HistorialItemResponse("Solicitud de información", solicitud.FechaSolicitud, analistaNombre, solicitud.Mensaje));
+
+                if (solicitud.Respuesta != null && solicitud.FechaRespuesta.HasValue)
+                    historial.Add(new HistorialItemResponse("Respuesta del vecino", solicitud.FechaRespuesta.Value, vecinoNombre, solicitud.Respuesta));
+            }
+
+            if (instruccion != null)
+            {
+                historial.Add(new HistorialItemResponse("Instrucción de trabajo", instruccion.FechaCreacion, analistaNombre, instruccion.Instruccion));
+                historial.Add(new HistorialItemResponse("Asignación a operario", instruccion.FechaAsignacion ?? instruccion.FechaCreacion, null, $"Asignado al operario {operarioNombre}."));
+            }
+
+            foreach (var trabajo in trabajos)
+                historial.Add(new HistorialItemResponse("Trabajo registrado", trabajo.FechaRegistro, operarioNombre, trabajo.Resultado));
+
+            foreach (var correccion in correcciones)
+                historial.Add(new HistorialItemResponse("Corrección solicitada", correccion.FechaSolicitud, analistaNombre, correccion.Correccion));
+
+            var historialOrdenado = historial.OrderBy(h => h.Fecha).ToList();
+
+            return new CasoAdminDetalleResponse(
+                caso.Id,
+                caso.Codigo,
+                caso.Area?.Nombre ?? "",
+                caso.Aldea?.Nombre ?? "",
+                caso.Direccion,
+                caso.TelefonoContacto,
+                caso.Descripcion,
+                caso.FechaRegistro,
+                caso.Estado.ToString(),
+                vecinoNombre,
+                analistaNombre,
+                operarioNombre,
+                archivos,
+                historialOrdenado
+            );
+        }
+
+
+       
+
+        public async Task<(bool Exito, string Mensaje)> RegistrarTrabajoAsync(int casoId, string operarioId, RegistrarTrabajoRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Resultado))
+                return (false, "Debe indicar el resultado del trabajo realizado.");
+
+            if (request.Resultado.Length > 2000)
+                return (false, "El resultado no puede superar los 2000 caracteres.");
+
+            var caso = await _context.Casos.FirstOrDefaultAsync(c => c.Id == casoId);
+
+            if (caso == null)
+                return (false, "El caso no existe.");
+
+            var instruccion = await _context.InstruccionesTrabajo
+                .FirstOrDefaultAsync(i =>
+                    i.CasoId == casoId &&
+                    i.OperarioId == operarioId);
+
+            if (instruccion == null)
+                return (false, "El caso no está asignado a este operario.");
+
+            if (caso.Estado != EstadoCaso.EnEjecucion)
+                return (false, "El caso no se encuentra en ejecución.");
+
+            var trabajo = new TrabajoCaso
+            {
+                CasoId = casoId,
+                OperarioId = operarioId,
+                Resultado = request.Resultado.Trim(),
+                FechaRegistro = DateTime.UtcNow
+            };
+
+            _context.TrabajosCaso.Add(trabajo);
+
+            caso.Estado = EstadoCaso.EnVerificacion;
+
+            await _context.SaveChangesAsync();
+
+            return (true, "El trabajo fue registrado correctamente y el caso pasó a verificación.");
+        }
+
+        public async Task<CasoSolucionResponse?> ObtenerSolucionAsync(int casoId)
+        {
+            var caso = await _context.Casos.FirstOrDefaultAsync(c => c.Id == casoId);
+            if (caso == null) return null;
+
+            var trabajo = await _context.TrabajosCaso
+                .Where(t => t.CasoId == casoId)
+                .OrderByDescending(t => t.FechaRegistro)
+                .FirstOrDefaultAsync();
+
+            var instruccion = await _context.InstruccionesTrabajo
+                .FirstOrDefaultAsync(i => i.CasoId == casoId);
+
+            var archivos = instruccion != null
+                ? await _context.ArchivosCaso
+                    .Where(a => a.CasoId == casoId && a.SubidoPorUserId == instruccion.OperarioId)
+                    .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido))
+                    .ToListAsync()
+                : new List<ArchivoResponse>();
+
+            return new CasoSolucionResponse(
+                caso.Codigo,
+                caso.Estado.ToString(),
+                trabajo?.Resultado,
+                trabajo?.FechaRegistro,
+                archivos
+            );
         }
     }
 }

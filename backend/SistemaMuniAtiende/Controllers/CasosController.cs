@@ -448,6 +448,32 @@ namespace SistemaMuniAtiende.Controllers
             var casos = await _casoService.ObtenerCasosDelVecinoAsync(vecinoId);
             return Ok(casos);
         }
+
+        [HttpGet]
+        [Authorize(Roles = "Administrador")]
+        public async Task<IActionResult> ObtenerTodos()
+        {
+            var casos = await _casoService.ObtenerTodosLosCasosAsync();
+            return Ok(casos);
+        }
+
+        [HttpGet("{id}/admin-detalle")]
+        [Authorize(Roles = "Administrador")]
+        public async Task<IActionResult> ObtenerDetalleAdmin(int id)
+        {
+            var caso = await _casoService.ObtenerDetalleAdminAsync(id);
+            if (caso == null) return NotFound(new { mensaje = "El caso no existe." });
+            return Ok(caso);
+        }
+
+        [HttpGet("{id}/solucion")]
+        [Authorize(Roles = "Administrador")]
+        public async Task<IActionResult> ObtenerSolucion(int id)
+        {
+            var solucion = await _casoService.ObtenerSolucionAsync(id);
+            if (solucion == null) return NotFound(new { mensaje = "El caso no existe." });
+            return Ok(solucion);
+        }
     }
 }
 

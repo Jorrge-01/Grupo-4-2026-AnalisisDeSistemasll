@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import Header from './components/Header'
 import Hero from './components/Hero'
@@ -27,6 +28,9 @@ import DetalleCasoAnalista from './pages/DetalleCasoAnalista'
 import Operario from './pages/Operario'
 import DetalleCasoOperario from './pages/DetalleCasoOperario'
 import MisCasos from './pages/MisCasos'
+import AdminCasos from './pages/AdminCasos'
+import ServidorCaido from './components/ServidorCaido'
+import { API_BASE_URL } from './lib/api'
 
 function Inicio() {
   return (
@@ -60,162 +64,202 @@ function Layout({ children }) {
   )
 }
 
+function VerificadorServidor({ children }) {
+  const location = useLocation()
+  const [servidorDisponible, setServidorDisponible] = useState(true)
+
+  useEffect(() => {
+    let cancelado = false
+
+    async function verificar() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/health`)
+        if (!cancelado) setServidorDisponible(res.ok)
+      } catch {
+        if (!cancelado) setServidorDisponible(false)
+      }
+    }
+
+    verificar()
+
+    return () => {
+      cancelado = true
+    }
+  }, [location.pathname])
+
+  if (!servidorDisponible) {
+    return <ServidorCaido />
+  }
+
+  return children
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Inicio />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/registro" element={<Registro />} />
-          <Route path="/olvide-password" element={<OlvideContrasena />} />
-          <Route path="/cambiar-password" element={<CambiarPassword />} />
+      <VerificadorServidor>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Inicio />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/registro" element={<Registro />} />
+            <Route path="/olvide-password" element={<OlvideContrasena />} />
+            <Route path="/cambiar-password" element={<CambiarPassword />} />
 
-          <Route
-            path="/admin"
-            element={
-              <RutaProtegida rolRequerido="Administrador">
-                <Admin />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/vecino"
-            element={
-              <RutaProtegida rolRequerido="Vecino">
-                <Vecino />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/admin/aldeas"
-            element={
-              <RutaProtegida rolRequerido="Administrador">
-                <GestionAldeas />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/admin/areas"
-            element={
-              <RutaProtegida rolRequerido="Administrador">
-                <GestionAreas />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/admin/usuarios"
-            element={
-              <RutaProtegida rolRequerido="Administrador">
-                <GestionUsuarios />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/admin/usuarios/vecino"
-            element={
-              <RutaProtegida rolRequerido="Administrador">
-                <CrearVecino />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/admin/usuarios/empleado"
-            element={
-              <RutaProtegida rolRequerido="Administrador">
-                <CrearEmpleadoMunicipal />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/admin/reportes"
-            element={
-              <RutaProtegida rolRequerido="Administrador">
-                <Reportes />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/admin/bitacora"
-            element={
-              <RutaProtegida rolRequerido="Administrador">
-                <ReporteBitacora />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/admin/reporte-usuarios"
-            element={
-              <RutaProtegida rolRequerido="Administrador">
-                <ReporteUsuarios />
-              </RutaProtegida>
-            }
-          />
+            <Route
+              path="/admin"
+              element={
+                <RutaProtegida rolRequerido="Administrador">
+                  <Admin />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/vecino"
+              element={
+                <RutaProtegida rolRequerido="Vecino">
+                  <Vecino />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/admin/aldeas"
+              element={
+                <RutaProtegida rolRequerido="Administrador">
+                  <GestionAldeas />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/admin/areas"
+              element={
+                <RutaProtegida rolRequerido="Administrador">
+                  <GestionAreas />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/admin/usuarios"
+              element={
+                <RutaProtegida rolRequerido="Administrador">
+                  <GestionUsuarios />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/admin/usuarios/vecino"
+              element={
+                <RutaProtegida rolRequerido="Administrador">
+                  <CrearVecino />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/admin/usuarios/empleado"
+              element={
+                <RutaProtegida rolRequerido="Administrador">
+                  <CrearEmpleadoMunicipal />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/admin/casos"
+              element={
+                <RutaProtegida rolRequerido="Administrador">
+                  <AdminCasos />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/admin/reportes"
+              element={
+                <RutaProtegida rolRequerido="Administrador">
+                  <Reportes />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/admin/bitacora"
+              element={
+                <RutaProtegida rolRequerido="Administrador">
+                  <ReporteBitacora />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/admin/reporte-usuarios"
+              element={
+                <RutaProtegida rolRequerido="Administrador">
+                  <ReporteUsuarios />
+                </RutaProtegida>
+              }
+            />
 
 
-          <Route
-            path="/vecino/perfil"
-            element={
-              <RutaProtegida rolRequerido="Vecino">
-                <MiPerfil />
-              </RutaProtegida>
-            }
-          />
+            <Route
+              path="/vecino/perfil"
+              element={
+                <RutaProtegida rolRequerido="Vecino">
+                  <MiPerfil />
+                </RutaProtegida>
+              }
+            />
 
-          <Route
-            path="/vecino/casos/nuevo"
-            element={
-              <RutaProtegida rolRequerido="Vecino">
-                <RegistrarCaso />
-              </RutaProtegida>
-            }
-          />
+            <Route
+              path="/vecino/casos/nuevo"
+              element={
+                <RutaProtegida rolRequerido="Vecino">
+                  <RegistrarCaso />
+                </RutaProtegida>
+              }
+            />
 
-          <Route
-            path="/analista"
-            element={
-              <RutaProtegida rolRequerido="Analista">
-                <Analista />
-              </RutaProtegida>
-            }
-          />
+            <Route
+              path="/analista"
+              element={
+                <RutaProtegida rolRequerido="Analista">
+                  <Analista />
+                </RutaProtegida>
+              }
+            />
 
-          <Route
-            path="/analista/casos/:id"
-            element={
-              <RutaProtegida rolRequerido="Analista">
-                <DetalleCasoAnalista />
-              </RutaProtegida>
-            }
-          />
+            <Route
+              path="/analista/casos/:id"
+              element={
+                <RutaProtegida rolRequerido="Analista">
+                  <DetalleCasoAnalista />
+                </RutaProtegida>
+              }
+            />
 
-          <Route
-            path="/empleado"
-            element={
-              <RutaProtegida rolRequerido="Empleado">
-                <Operario />
-              </RutaProtegida>
-            }
-          />
-          
-          <Route
-            path="/empleado/casos/:id"
-            element={
-              <RutaProtegida rolRequerido="Empleado">
-                <DetalleCasoOperario />
-              </RutaProtegida>
-            }
-          />
-<Route
-  path="/vecino/casos"
-  element={
-    <RutaProtegida rolRequerido="Vecino">
-      <MisCasos />
-    </RutaProtegida>
-  }
-/>
-        </Routes>
-      </Layout>
+            <Route
+              path="/empleado"
+              element={
+                <RutaProtegida rolRequerido="Empleado">
+                  <Operario />
+                </RutaProtegida>
+              }
+            />
+            
+            <Route
+              path="/empleado/casos/:id"
+              element={
+                <RutaProtegida rolRequerido="Empleado">
+                  <DetalleCasoOperario />
+                </RutaProtegida>
+              }
+            />
+            <Route
+              path="/vecino/casos"
+              element={
+                <RutaProtegida rolRequerido="Vecino">
+                  <MisCasos />
+                </RutaProtegida>
+              }
+            />
+          </Routes>
+        </Layout>
+      </VerificadorServidor>
     </BrowserRouter>
   )
 }

@@ -13,7 +13,8 @@ import {
 } from 'lucide-react'
 
 import HeaderInterno from '../components/HeaderInterno'
-import { apiFetch } from '../lib/api'
+import SubidaEvidencia from '../components/SubidaEvidencia'
+import { apiFetch, API_BASE_URL } from '../lib/api'
 
 function obtenerClaseEstado(estado) {
   switch (estado) {
@@ -68,6 +69,7 @@ export default function DetalleCasoOperario() {
 
   const [resultadoTrabajo, setResultadoTrabajo] = useState('')
   const [procesandoTrabajo, setProcesandoTrabajo] = useState(false)
+  const [fotosTrabajo, setFotosTrabajo] = useState([])
 
   async function cargarDetalle() {
     try {
@@ -146,21 +148,27 @@ export default function DetalleCasoOperario() {
 
       const token = localStorage.getItem('token')
 
-      const data = await apiFetch(
-        `/api/Casos/${id}/registrar-trabajo`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            resultado: resultadoTrabajo,
-          }),
-        }
-      )
+      const formData = new FormData()
+      formData.append('resultado', resultadoTrabajo.trim())
+      fotosTrabajo.forEach((foto) => formData.append('archivos', foto))
+
+      const res = await fetch(`${API_BASE_URL}/api/Casos/${id}/registrar-trabajo`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.mensaje || 'No se pudo registrar el trabajo.')
+      }
 
       setMensaje(data.mensaje)
       setResultadoTrabajo('')
+      setFotosTrabajo([])
 
       await cargarDetalle()
     } catch (err) {
@@ -617,6 +625,22 @@ export default function DetalleCasoOperario() {
                         </p>
 
                       </div>
+
+                    </div>
+
+                    {/* EVIDENCIA DEL TRABAJO */}
+                    <div className="mt-5">
+
+                      <label className="block text-sm font-medium text-cyan-900 mb-2">
+                        Fotos del trabajo realizado (opcional, máx. 2)
+                      </label>
+
+                      <SubidaEvidencia
+                        fotos={fotosTrabajo}
+                        setFotos={setFotosTrabajo}
+                        documento={null}
+                        setDocumento={() => {}}
+                      />
 
                     </div>
 

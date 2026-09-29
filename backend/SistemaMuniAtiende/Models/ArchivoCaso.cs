@@ -22,5 +22,7 @@ namespace SistemaMuniAtiende.Models
         public long TamanoBytes { get; set; }
 
         public DateTime FechaCarga { get; set; } = DateTime.UtcNow;
+
+        public string? SubidoPorUserId { get; set; }
     }
 }

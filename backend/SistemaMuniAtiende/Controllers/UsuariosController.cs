@@ -164,5 +164,26 @@ namespace SistemaMuniAtiende.Controllers
 
             return Ok(aldeas);
         }
+
+        [HttpGet("conteo-por-rol")]
+        public async Task<IActionResult> ConteoPorRol()
+        {
+            var conteo = await (
+                from usuario in _context.Users
+                join userRole in _context.UserRoles
+                    on usuario.Id equals userRole.UserId
+                join role in _context.Roles
+                    on userRole.RoleId equals role.Id
+                group role by role.Name into g
+                select new
+                {
+                    rol = g.Key,
+                    cantidad = g.Count()
+                })
+                .OrderBy(x => x.rol)
+                .ToListAsync();
+
+            return Ok(conteo);
+        }
     }
 }
