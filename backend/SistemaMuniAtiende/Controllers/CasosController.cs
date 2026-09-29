@@ -182,7 +182,7 @@ namespace SistemaMuniAtiende.Controllers
 
         [HttpPost("{id}/responder-informacion")]
         [Authorize(Roles = "Vecino")]
-        public async Task<IActionResult> ResponderInformacion(int id, ResponderInformacionRequest request)
+        public async Task<IActionResult> ResponderInformacion(int id, [FromForm] string respuesta, [FromForm] List<IFormFile>? archivos)
         {
             var vecinoId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -195,7 +195,8 @@ namespace SistemaMuniAtiende.Controllers
             var resultado = await _casoService.ResponderInformacionAsync(
                 id,
                 vecinoId,
-                request);
+                respuesta,
+                archivos);
 
             if (!resultado.Exito)
                 return BadRequest(new

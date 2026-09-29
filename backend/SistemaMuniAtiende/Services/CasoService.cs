@@ -408,12 +408,12 @@ namespace SistemaMuniAtiende.Services
             return (true, "Se solicitó información al vecino correctamente.");
         }
 
-        public async Task<(bool Exito, string Mensaje)> ResponderInformacionAsync(int casoId, string vecinoId, ResponderInformacionRequest request)
+        public async Task<(bool Exito, string Mensaje)> ResponderInformacionAsync(int casoId, string vecinoId, string respuesta, List<IFormFile>? archivos)
         {
-            if (string.IsNullOrWhiteSpace(request.Respuesta))
+            if (string.IsNullOrWhiteSpace(respuesta))
                 return (false, "Debe proporcionar una respuesta.");
 
-            if (request.Respuesta.Length > 2000)
+            if (respuesta.Length > 2000)
                 return (false, "La respuesta no puede superar los 2000 caracteres.");
 
             var caso = await _context.Casos
@@ -437,7 +437,56 @@ namespace SistemaMuniAtiende.Services
             if (solicitud == null)
                 return (false, "No existe una solicitud de información pendiente para este caso.");
 
-            solicitud.Respuesta = request.Respuesta.Trim();
+            if (archivos != null && archivos.Count > 0)
+            {
+                if (archivos.Count > 3)
+                    return (false, "Solo puedes subir un máximo de 2 fotos y 1 documento.");
+
+                var fotosExistentes = await _context.ArchivosCaso.CountAsync(a => a.CasoId == casoId && a.TipoContenido.StartsWith("image/"));
+                var documentosExistentes = await _context.ArchivosCaso.CountAsync(a => a.CasoId == casoId && a.TipoContenido == "application/pdf");
+
+                foreach (var archivo in archivos)
+                {
+                    if (archivo.Length == 0)
+                        return (false, $"El archivo {archivo.FileName} está vacío.");
+
+                    if (archivo.Length > 5 * 1024 * 1024)
+                        return (false, $"El archivo {archivo.FileName} excede el tamaño máximo de 5 MB.");
+
+                    var extension = Path.GetExtension(archivo.FileName).ToLower();
+                    var esImagen = extension is ".png" or ".jpg" or ".jpeg";
+                    var esPdf = extension == ".pdf";
+
+                    if (!esImagen && !esPdf)
+                        return (false, $"El archivo {archivo.FileName} tiene un formato no permitido. Usa PNG, JPG o PDF.");
+
+                    if (!await ValidarFirmaArchivoAsync(archivo, esPdf))
+                        return (false, $"El archivo {archivo.FileName} no es un {(esPdf ? "PDF" : "imagen")} válido.");
+
+                    if (esImagen && fotosExistentes >= 2)
+                        return (false, "Ya se alcanzó el máximo de 2 fotos para este caso.");
+
+                    if (esPdf && documentosExistentes >= 1)
+                        return (false, "Ya se alcanzó el máximo de 1 documento para este caso.");
+
+                    var nombreSaneado = SanearNombreArchivo(archivo.FileName);
+                    var url = await _blobStorageService.SubirArchivoAsync(archivo, casoId);
+
+                    _context.ArchivosCaso.Add(new ArchivoCaso
+                    {
+                        CasoId = casoId,
+                        NombreArchivo = nombreSaneado,
+                        RutaArchivo = url,
+                        TipoContenido = archivo.ContentType,
+                        TamanoBytes = archivo.Length
+                    });
+
+                    if (esImagen) fotosExistentes++;
+                    if (esPdf) documentosExistentes++;
+                }
+            }
+
+            solicitud.Respuesta = respuesta.Trim();
             solicitud.FechaRespuesta = DateTime.UtcNow;
             solicitud.Estado = EstadoSolicitudInformacion.Respondida;
 

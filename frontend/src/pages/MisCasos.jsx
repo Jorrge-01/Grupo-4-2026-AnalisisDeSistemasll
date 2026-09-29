@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Clock, FileText, Plus, X, MapPin, Phone, Paperclip } from 'lucide-react'
 import HeaderInterno from '../components/HeaderInterno'
-import { apiFetch } from '../lib/api'
+import SubidaEvidencia from '../components/SubidaEvidencia'
+import { apiFetch, API_BASE_URL } from '../lib/api'
 
 function obtenerClaseEstado(estado) {
   const mapa = {
@@ -48,6 +49,8 @@ export default function MisCasos() {
   const [cargandoDetalle, setCargandoDetalle] = useState(false)
 
   const [respuestaInformacion, setRespuestaInformacion] = useState('')
+  const [fotosRespuesta, setFotosRespuesta] = useState([])
+  const [documentoRespuesta, setDocumentoRespuesta] = useState(null)
   const [enviandoRespuesta, setEnviandoRespuesta] = useState(false)
   const [mensajeRespuesta, setMensajeRespuesta] = useState('')
 
@@ -75,6 +78,8 @@ export default function MisCasos() {
     setCargandoDetalle(true)
     setDetalle(null)
     setRespuestaInformacion('')
+    setFotosRespuesta([])
+    setDocumentoRespuesta(null)
     setMensajeRespuesta('')
 
     try {
@@ -91,53 +96,63 @@ export default function MisCasos() {
   }
 
   async function responderInformacion() {
-  if (!respuestaInformacion.trim()) {
-    setMensajeRespuesta('Debes escribir una respuesta.')
-    return
-  }
+    if (!respuestaInformacion.trim()) {
+      setMensajeRespuesta('Debes escribir una respuesta.')
+      return
+    }
 
-  setEnviandoRespuesta(true)
-  setMensajeRespuesta('')
+    setEnviandoRespuesta(true)
+    setMensajeRespuesta('')
 
-  try {
-    const token = localStorage.getItem('token')
+    try {
+      const token = localStorage.getItem('token')
 
-    const data = await apiFetch(
-      `/api/Casos/${detalle.id}/responder-informacion`,
-      {
+      const formData = new FormData()
+      formData.append('respuesta', respuestaInformacion.trim())
+      fotosRespuesta.forEach((foto) => {
+        if (foto) formData.append('archivos', foto)
+      })
+      if (documentoRespuesta) {
+        formData.append('archivos', documentoRespuesta)
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/Casos/${detalle.id}/responder-informacion`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          respuesta: respuestaInformacion.trim(),
-        }),
+        body: formData,
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.mensaje || 'No se pudo enviar la respuesta.')
       }
-    )
 
-    setMensajeRespuesta(data.mensaje || 'La información fue enviada correctamente.')
-    setRespuestaInformacion('')
+      setMensajeRespuesta(data.mensaje || 'La información fue enviada correctamente.')
+      setRespuestaInformacion('')
+      setFotosRespuesta([])
+      setDocumentoRespuesta(null)
 
-   
-    await abrirDetalle(detalle.id)
+      await abrirDetalle(detalle.id)
 
-    
-    const casosActualizados = await apiFetch('/api/Casos/mis-casos-vecino', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
+      const casosActualizados = await apiFetch('/api/Casos/mis-casos-vecino', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
 
-    setCasos(casosActualizados)
+      setCasos(casosActualizados)
 
-  } catch (err) {
-    setMensajeRespuesta(
-      err.message || 'No se pudo enviar la respuesta.'
-    )
-  } finally {
-    setEnviandoRespuesta(false)
+    } catch (err) {
+      setMensajeRespuesta(
+        err.message || 'No se pudo enviar la respuesta.'
+      )
+    } finally {
+      setEnviandoRespuesta(false)
+    }
   }
-}
 
   function cerrarDetalle() {
     setCasoSeleccionadoId(null)
@@ -339,7 +354,18 @@ export default function MisCasos() {
                           <span className="text-xs text-[var(--color-tinta)]/50">
                             {respuestaInformacion.length}/2000
                           </span>
+                        </div>
 
+                        <div className="mt-3">
+                          <SubidaEvidencia
+                            fotos={fotosRespuesta}
+                            setFotos={setFotosRespuesta}
+                            documento={documentoRespuesta}
+                            setDocumento={setDocumentoRespuesta}
+                          />
+                        </div>
+
+                        <div className="flex justify-end mt-3">
                           <button
                             type="button"
                             onClick={responderInformacion}
