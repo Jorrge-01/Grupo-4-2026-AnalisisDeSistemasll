@@ -18,15 +18,16 @@ namespace SistemaMuniAtiende.Controllers
             _context = context;
         }
         [HttpGet]
+        [HttpGet]
         public async Task<IActionResult> Listar(
-      [FromQuery] int pagina = 1,
-      [FromQuery] int tamano = 50,
-      [FromQuery] string? entidad = null,
-      [FromQuery] string? accion = null,
-      [FromQuery] int? anio = null,
-      [FromQuery] int? mes = null,
-      [FromQuery] DateTime? desde = null,
-      [FromQuery] DateTime? hasta = null)
+    [FromQuery] int pagina = 1,
+    [FromQuery] int tamano = 50,
+    [FromQuery] string? entidad = null,
+    [FromQuery] string? accion = null,
+    [FromQuery] int? anio = null,
+    [FromQuery] int? mes = null,
+    [FromQuery] DateTime? desde = null,
+    [FromQuery] DateTime? hasta = null)
         {
             var query = _context.Bitacoras.AsQueryable();
 
@@ -36,11 +37,22 @@ namespace SistemaMuniAtiende.Controllers
             if (!string.IsNullOrWhiteSpace(accion))
                 query = query.Where(b => b.Accion == accion);
 
-            if (anio.HasValue)
-                query = query.Where(b => b.Fecha.Year == anio.Value);
+            if (anio.HasValue || mes.HasValue)
+            {
+                var zonaGt = TimeZoneInfo.FindSystemTimeZoneById("America/Guatemala");
 
-            if (mes.HasValue)
-                query = query.Where(b => b.Fecha.Month == mes.Value);
+                var anioFiltro = anio ?? DateTime.UtcNow.Year;
+                var mesFiltro = mes ?? 1;
+                var rangoCompleto = mes.HasValue ? 1 : 12;
+
+                var inicioLocal = new DateTime(anioFiltro, mesFiltro, 1, 0, 0, 0, DateTimeKind.Unspecified);
+                var finLocal = inicioLocal.AddMonths(rangoCompleto);
+
+                var inicioUtc = TimeZoneInfo.ConvertTimeToUtc(inicioLocal, zonaGt);
+                var finUtc = TimeZoneInfo.ConvertTimeToUtc(finLocal, zonaGt);
+
+                query = query.Where(b => b.Fecha >= inicioUtc && b.Fecha < finUtc);
+            }
 
             if (desde.HasValue)
                 query = query.Where(b => b.Fecha >= DateTime.SpecifyKind(desde.Value, DateTimeKind.Utc));
