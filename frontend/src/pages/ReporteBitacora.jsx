@@ -13,6 +13,11 @@ const MESES = [
   { valor: 10, nombre: 'Octubre' }, { valor: 11, nombre: 'Noviembre' }, { valor: 12, nombre: 'Diciembre' },
 ]
 
+const CLASE_NEUTRA = 'bg-[var(--color-azul-piedra)]/10 text-[var(--color-azul-piedra)]'
+const CLASE_EXITO = 'bg-green-100 text-green-800'
+const CLASE_FALLO = 'bg-red-100 text-red-700'
+const CLASE_ALERTA = 'bg-orange-100 text-orange-800'
+
 function traducirAccion(accion) {
   const mapa = {
     Added: 'Creación',
@@ -24,6 +29,38 @@ function traducirAccion(accion) {
     Desactivado: 'Desactivación',
   }
   return mapa[accion] || accion
+}
+
+function leerDetalle(detalleJson) {
+  if (!detalleJson) return {}
+  try {
+    const obj = JSON.parse(detalleJson)
+    return obj && typeof obj === 'object' ? obj : {}
+  } catch {
+    return {}
+  }
+}
+
+function obtenerEtiqueta(registro) {
+  if (registro.accion !== 'Login') {
+    return { texto: traducirAccion(registro.accion), clase: CLASE_NEUTRA }
+  }
+
+  const detalle = leerDetalle(registro.detalle)
+  const resultado = String(detalle.resultado ?? detalle.Resultado ?? '')
+  const descripcion = String(detalle.descripcion ?? detalle.Descripcion ?? '')
+  const resultadoNormalizado = resultado.toLowerCase()
+
+  if (resultadoNormalizado === 'exitoso') {
+    return { texto: 'Inicio de sesión exitoso', clase: CLASE_EXITO }
+  }
+  if (resultadoNormalizado === 'requierecambiopassword') {
+    return { texto: 'Inicio con contraseña temporal', clase: CLASE_ALERTA }
+  }
+  if (/bloquead/i.test(descripcion) || /bloquead/i.test(resultado)) {
+    return { texto: 'Cuenta bloqueada', clase: CLASE_ALERTA }
+  }
+  return { texto: 'Inicio de sesión fallido', clase: CLASE_FALLO }
 }
 
 export default function ReporteBitacora() {
@@ -54,9 +91,7 @@ export default function ReporteBitacora() {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       })
       setEntidades(data)
-    } catch (err) {
-      // silencioso, solo afecta el filtro
-    }
+    } catch (err) {}
   }
 
   async function cargarAnios() {
@@ -65,9 +100,7 @@ export default function ReporteBitacora() {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       })
       setAnios(data)
-    } catch (err) {
-      // silencioso, solo afecta el filtro
-    }
+    } catch (err) {}
   }
 
   async function cargar() {
@@ -128,7 +161,7 @@ export default function ReporteBitacora() {
     const filas = registros.map((r) => [
       new Date(r.fecha).toLocaleString('es-GT'),
       r.usuario,
-      traducirAccion(r.accion),
+      obtenerEtiqueta(r).texto,
       r.entidad,
       r.entidadId || '',
       r.ip || '',
@@ -271,30 +304,33 @@ export default function ReporteBitacora() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-azul-piedra)]/10">
-                  {registros.map((r) => (
-                    <tr key={r.id} className="hover:bg-[var(--color-piedra)]/50">
-                      <td className="px-4 py-3 text-[var(--color-tinta)]/80 whitespace-nowrap">
-                        {new Date(r.fecha).toLocaleString('es-GT')}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--color-tinta)]/80">
-                        {r.usuario}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-[var(--color-azul-piedra)]/10 text-[var(--color-azul-piedra)]">
-                          {traducirAccion(r.accion)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-[var(--color-tinta)]/60">{r.ip || '—'}</td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => setRegistroDetalle(r)}
-                          className="text-xs text-[var(--color-ocre)] hover:underline font-medium"
-                        >
-                          Ver detalle
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {registros.map((r) => {
+                    const etiqueta = obtenerEtiqueta(r)
+                    return (
+                      <tr key={r.id} className="hover:bg-[var(--color-piedra)]/50">
+                        <td className="px-4 py-3 text-[var(--color-tinta)]/80 whitespace-nowrap">
+                          {new Date(r.fecha).toLocaleString('es-GT')}
+                        </td>
+                        <td className="px-4 py-3 text-[var(--color-tinta)]/80">
+                          {r.usuario}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-xs whitespace-nowrap ${etiqueta.clase}`}>
+                            {etiqueta.texto}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-[var(--color-tinta)]/60">{r.ip || '—'}</td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => setRegistroDetalle(r)}
+                            className="text-xs text-[var(--color-ocre)] hover:underline font-medium"
+                          >
+                            Ver detalle
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -348,7 +384,7 @@ export default function ReporteBitacora() {
             <div className="px-6 py-4 space-y-2 text-sm border-b border-[var(--color-azul-piedra)]/15">
               <p><span className="font-medium text-[var(--color-tinta)]">Fecha:</span> <span className="text-[var(--color-tinta)]/70">{new Date(registroDetalle.fecha).toLocaleString('es-GT')}</span></p>
               <p><span className="font-medium text-[var(--color-tinta)]">Usuario:</span> <span className="text-[var(--color-tinta)]/70">{registroDetalle.usuario}</span></p>
-              <p><span className="font-medium text-[var(--color-tinta)]">Acción:</span> <span className="text-[var(--color-tinta)]/70">{traducirAccion(registroDetalle.accion)}</span></p>
+              <p><span className="font-medium text-[var(--color-tinta)]">Acción:</span> <span className="text-[var(--color-tinta)]/70">{obtenerEtiqueta(registroDetalle).texto}</span></p>
               <p><span className="font-medium text-[var(--color-tinta)]">Entidad:</span> <span className="text-[var(--color-tinta)]/70">{registroDetalle.entidad} (ID: {registroDetalle.entidadId || '—'})</span></p>
               <p><span className="font-medium text-[var(--color-tinta)]">IP:</span> <span className="text-[var(--color-tinta)]/70">{registroDetalle.ip || '—'}</span></p>
             </div>
