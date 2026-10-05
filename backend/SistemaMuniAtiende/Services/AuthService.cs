@@ -265,7 +265,7 @@ namespace SistemaMuniAtiende.Services
                 """);
         }
 
-        public async Task<LoginResponse?> LoginAsync(LoginRequest req)
+        public async Task<(LoginResponse? respuesta, string? error)> LoginAsync(LoginRequest req)
         {
             var ip = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
             var user = await _userManager.FindByEmailAsync(req.Email);
@@ -273,30 +273,48 @@ namespace SistemaMuniAtiende.Services
             if (user == null || !user.Activo)
             {
                 await RegistrarBitacoraLogin(null, req.Email, "Fallido", ip, "Usuario no encontrado o inactivo");
-                return null;
+                return (null, "Credenciales inválidas.");
+            }
+
+            const string mensajeBloqueo = "Tu cuenta fue bloqueada temporalmente por demasiados intentos fallidos. Intenta nuevamente en 15 minutos.";
+
+            if (await _userManager.IsLockedOutAsync(user))
+            {
+                await RegistrarBitacoraLogin(user.Id, req.Email, "Fallido", ip, "Intento de acceso con cuenta bloqueada");
+                return (null, mensajeBloqueo);
             }
 
             var passwordValida = await _userManager.CheckPasswordAsync(user, req.Password);
             if (!passwordValida)
             {
-                await RegistrarBitacoraLogin(user.Id, req.Email, "Fallido", ip, "Contraseña incorrecta");
-                return null;
+                await _userManager.AccessFailedAsync(user);
+
+                if (await _userManager.IsLockedOutAsync(user))
+                {
+                    await RegistrarBitacoraLogin(user.Id, req.Email, "Fallido", ip, "Contraseña incorrecta. Cuenta bloqueada por alcanzar el máximo de intentos fallidos");
+                    return (null, mensajeBloqueo);
+                }
+
+                var intentos = await _userManager.GetAccessFailedCountAsync(user);
+                await RegistrarBitacoraLogin(user.Id, req.Email, "Fallido", ip, $"Contraseña incorrecta (intento fallido {intentos})");
+                return (null, "Credenciales inválidas.");
             }
+
+            await _userManager.ResetAccessFailedCountAsync(user);
 
             var roles = await _userManager.GetRolesAsync(user);
 
             if (user.DebeCambiarPassword)
             {
                 await RegistrarBitacoraLogin(user.Id, req.Email, "RequiereCambioPassword", ip, "Login con contraseña temporal");
-                return new LoginResponse(string.Empty, user.Nombre, roles, true);
+                return (new LoginResponse(string.Empty, user.Nombre, roles, true), null);
             }
 
             await RegistrarBitacoraLogin(user.Id, req.Email, "Exitoso", ip, "Inicio de sesión exitoso");
 
             var token = GenerarToken(user, roles);
-            return new LoginResponse(token, user.Nombre, roles, false);
+            return (new LoginResponse(token, user.Nombre, roles, false), null);
         }
-
         public async Task RegistrarBitacoraLogin(string? userId, string email, string resultado, string? ip, string descripcion)
         {
             _context.Bitacoras.Add(new Bitacora

@@ -44,9 +44,9 @@ namespace SistemaMuniAtiende.Api.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest req)
         {
-            var resultado = await _authService.LoginAsync(req);
-            if (resultado == null) return Unauthorized(new { mensaje = "Credenciales inválidas." });
-            return Ok(resultado);
+            var (respuesta, error) = await _authService.LoginAsync(req);
+            if (respuesta == null) return Unauthorized(new { mensaje = error });
+            return Ok(respuesta);
         }
 
         [HttpPost("olvide-password")]

@@ -1,18 +1,44 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import logoMuni from '../assets/logo-muni.png'
 import { apiFetch } from '../lib/api'
+
+const MENSAJE_CAMPO_VACIO = 'Completa este campo'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
+  const [errores, setErrores] = useState({ email: '', password: '' })
+  const emailRef = useRef(null)
+  const passwordRef = useRef(null)
   const navigate = useNavigate()
+
+  function validarCampos() {
+    const nuevosErrores = {
+      email: email.trim() ? '' : MENSAJE_CAMPO_VACIO,
+      password: password ? '' : MENSAJE_CAMPO_VACIO,
+    }
+    setErrores(nuevosErrores)
+
+    if (nuevosErrores.email) {
+      emailRef.current?.focus()
+      return false
+    }
+    if (nuevosErrores.password) {
+      passwordRef.current?.focus()
+      return false
+    }
+    return true
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+
+    if (!validarCampos()) return
+
     setCargando(true)
 
     try {
@@ -20,8 +46,8 @@ export default function Login() {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       })
-if (data.requiereCambioPassword) {
 
+      if (data.requiereCambioPassword) {
         navigate('/cambiar-password', { state: { email } })
         return
       }
@@ -59,20 +85,31 @@ if (data.requiereCambioPassword) {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} noValidate className="space-y-5">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-[var(--color-tinta)] mb-1.5">
                   Correo electrónico
                 </label>
                 <input
                   id="email"
+                  ref={emailRef}
                   type="email"
-                  required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    if (errores.email) setErrores((prev) => ({ ...prev, email: '' }))
+                  }}
                   placeholder="tucorreo@ejemplo.com"
-                  className="w-full px-4 py-2.5 rounded-md border border-[var(--color-azul-piedra)]/30 bg-white text-[var(--color-tinta)] placeholder:text-[var(--color-azul-piedra)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-ocre)] transition-shadow"
+                  aria-invalid={!!errores.email}
+                  className={`w-full px-4 py-2.5 rounded-md border bg-white text-[var(--color-tinta)] placeholder:text-[var(--color-azul-piedra)]/50 focus:outline-none focus:ring-2 transition-shadow ${
+                    errores.email
+                      ? 'border-red-500 focus:ring-red-300'
+                      : 'border-[var(--color-azul-piedra)]/30 focus:ring-[var(--color-ocre)]'
+                  }`}
                 />
+                {errores.email && (
+                  <p className="text-xs text-red-600 mt-1.5">{errores.email}</p>
+                )}
               </div>
 
               <div>
@@ -81,13 +118,24 @@ if (data.requiereCambioPassword) {
                 </label>
                 <input
                   id="password"
+                  ref={passwordRef}
                   type="password"
-                  required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    if (errores.password) setErrores((prev) => ({ ...prev, password: '' }))
+                  }}
                   placeholder="••••••••"
-                  className="w-full px-4 py-2.5 rounded-md border border-[var(--color-azul-piedra)]/30 bg-white text-[var(--color-tinta)] placeholder:text-[var(--color-azul-piedra)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-ocre)] transition-shadow"
+                  aria-invalid={!!errores.password}
+                  className={`w-full px-4 py-2.5 rounded-md border bg-white text-[var(--color-tinta)] placeholder:text-[var(--color-azul-piedra)]/50 focus:outline-none focus:ring-2 transition-shadow ${
+                    errores.password
+                      ? 'border-red-500 focus:ring-red-300'
+                      : 'border-[var(--color-azul-piedra)]/30 focus:ring-[var(--color-ocre)]'
+                  }`}
                 />
+                {errores.password && (
+                  <p className="text-xs text-red-600 mt-1.5">{errores.password}</p>
+                )}
               </div>
 
               {error && (
