@@ -133,7 +133,12 @@ export default function Registro() {
 
     setErroresCampos({})
 
-    if (form.fechaNacimiento > fechaMaximaMayorEdad) {
+    if (form.fechaNacimiento > hoy) {
+      setError('La fecha de nacimiento no puede ser posterior a la fecha actual.')
+      return
+    }
+
+if (form.fechaNacimiento > fechaMaximaMayorEdad) {
       setError('Debes ser mayor de edad para registrarte.')
       return
     }
@@ -144,7 +149,7 @@ export default function Registro() {
     }
 
     if (form.dpi.slice(-4) !== '0110') {
-      setError('El CUI ingresado no corresponde a un vecino registrado en este municipio.')
+      setError('El DPI ingresado no corresponde a un vecino registrado en este municipio.')
       return
     }
 
