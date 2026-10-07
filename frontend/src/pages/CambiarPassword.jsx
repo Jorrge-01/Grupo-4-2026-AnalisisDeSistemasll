@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import logoMuni from '../assets/logo-muni.png'
 import { apiFetch } from '../lib/api'
 import { traducirError } from '../lib/traducirError'
 import PasswordChecklist, { passwordEsValida } from '../components/PasswordChecklist'
+
+const MSJ_CAMPO_VACIO = 'Completa este campo'
 
 export default function CambiarPassword() {
   const location = useLocation()
@@ -16,18 +18,40 @@ export default function CambiarPassword() {
   const [confirmarPasswordNueva, setConfirmarPasswordNueva] = useState('')
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
+  const [errores, setErrores] = useState({})
   const [exito, setExito] = useState(false)
+
+  const emailRef = useRef(null)
+  const actualRef = useRef(null)
+  const nuevaRef = useRef(null)
+  const confirmarRef = useRef(null)
+
+  function limpiarError(campo) {
+    setErrores((prev) => ({ ...prev, [campo]: '' }))
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
 
-    if (!passwordActual) {
-      setError('Ingresa tu contraseña temporal.')
+    const nuevosErrores = {}
+    if (!emailPrellenado && !email.trim()) nuevosErrores.email = MSJ_CAMPO_VACIO
+    if (!passwordActual) nuevosErrores.passwordActual = MSJ_CAMPO_VACIO
+    if (!passwordNueva) nuevosErrores.passwordNueva = MSJ_CAMPO_VACIO
+    if (!confirmarPasswordNueva) nuevosErrores.confirmarPasswordNueva = MSJ_CAMPO_VACIO
+
+    setErrores(nuevosErrores)
+
+    if (Object.keys(nuevosErrores).length > 0) {
+      if (nuevosErrores.email) emailRef.current?.focus()
+      else if (nuevosErrores.passwordActual) actualRef.current?.focus()
+      else if (nuevosErrores.passwordNueva) nuevaRef.current?.focus()
+      else confirmarRef.current?.focus()
       return
     }
+
     if (!passwordEsValida(passwordNueva)) {
-      setError('La nueva contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.')
+      setError('La contraseña no cumple con los requisitos de seguridad.')
       return
     }
     if (passwordNueva !== confirmarPasswordNueva) {
@@ -55,9 +79,16 @@ export default function CambiarPassword() {
     }
   }
 
-  const inputClass =
-    'w-full px-4 py-2.5 rounded-md border border-[var(--color-azul-piedra)]/30 bg-white text-[var(--color-tinta)] placeholder:text-[var(--color-azul-piedra)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-ocre)] transition-shadow'
+  const inputBase =
+    'w-full px-4 py-2.5 rounded-md border bg-white text-[var(--color-tinta)] placeholder:text-[var(--color-azul-piedra)]/50 focus:outline-none focus:ring-2 transition-shadow'
+  const inputClass = (campo) =>
+    `${inputBase} ${
+      errores[campo]
+        ? 'border-red-500 focus:ring-red-400'
+        : 'border-[var(--color-azul-piedra)]/30 focus:ring-[var(--color-ocre)]'
+    }`
   const labelClass = 'block text-sm font-medium text-[var(--color-tinta)] mb-1.5'
+  const errorClass = 'mt-1.5 text-sm text-red-600'
 
   return (
     <>
@@ -123,13 +154,17 @@ export default function CambiarPassword() {
                   <label htmlFor="email" className={labelClass}>Correo electrónico</label>
                   <input
                     id="email"
+                    ref={emailRef}
                     type="email"
-                    required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value)
+                      limpiarError('email')
+                    }}
                     placeholder="tucorreo@ejemplo.com"
-                    className={inputClass}
+                    className={inputClass('email')}
                   />
+                  {errores.email && <p className={errorClass}>{errores.email}</p>}
                 </div>
               )}
 
@@ -137,26 +172,34 @@ export default function CambiarPassword() {
                 <label htmlFor="passwordActual" className={labelClass}>Contraseña temporal</label>
                 <input
                   id="passwordActual"
+                  ref={actualRef}
                   type="password"
-                  required
                   value={passwordActual}
-                  onChange={(e) => setPasswordActual(e.target.value)}
+                  onChange={(e) => {
+                    setPasswordActual(e.target.value)
+                    limpiarError('passwordActual')
+                  }}
                   placeholder="La que recibiste por correo"
-                  className={inputClass}
+                  className={inputClass('passwordActual')}
                 />
+                {errores.passwordActual && <p className={errorClass}>{errores.passwordActual}</p>}
               </div>
 
               <div>
                 <label htmlFor="passwordNueva" className={labelClass}>Nueva contraseña</label>
                 <input
                   id="passwordNueva"
+                  ref={nuevaRef}
                   type="password"
-                  required
                   value={passwordNueva}
-                  onChange={(e) => setPasswordNueva(e.target.value)}
+                  onChange={(e) => {
+                    setPasswordNueva(e.target.value)
+                    limpiarError('passwordNueva')
+                  }}
                   placeholder="••••••••"
-                  className={inputClass}
+                  className={inputClass('passwordNueva')}
                 />
+                {errores.passwordNueva && <p className={errorClass}>{errores.passwordNueva}</p>}
                 <PasswordChecklist password={passwordNueva} />
               </div>
 
@@ -164,13 +207,17 @@ export default function CambiarPassword() {
                 <label htmlFor="confirmarPasswordNueva" className={labelClass}>Confirmar nueva contraseña</label>
                 <input
                   id="confirmarPasswordNueva"
+                  ref={confirmarRef}
                   type="password"
-                  required
                   value={confirmarPasswordNueva}
-                  onChange={(e) => setConfirmarPasswordNueva(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmarPasswordNueva(e.target.value)
+                    limpiarError('confirmarPasswordNueva')
+                  }}
                   placeholder="••••••••"
-                  className={inputClass}
+                  className={inputClass('confirmarPasswordNueva')}
                 />
+                {errores.confirmarPasswordNueva && <p className={errorClass}>{errores.confirmarPasswordNueva}</p>}
               </div>
 
               {error && (

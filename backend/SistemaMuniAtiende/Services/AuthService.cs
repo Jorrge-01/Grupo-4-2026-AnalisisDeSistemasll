@@ -358,7 +358,8 @@ namespace SistemaMuniAtiende.Services
                 return (false, "No se pudo procesar la solicitud.");
 
             var passwordTemporal = GenerarPasswordTemporal();
-
+            var hashAnterior = user.PasswordHash;
+            var debeCambiarAnterior = user.DebeCambiarPassword;
             var removeResult = await _userManager.RemovePasswordAsync(user);
 
             if (!removeResult.Succeeded)
@@ -376,7 +377,7 @@ namespace SistemaMuniAtiende.Services
             user.DebeCambiarPassword = true;
 
             await _userManager.UpdateAsync(user);
-
+            try { 
             await _emailService.EnviarAsync(
                 user.Email!,
                 "Recuperación de contraseña - Sistema QRDS",
@@ -460,14 +461,39 @@ namespace SistemaMuniAtiende.Services
         </body>
         </html>
         """);
+            }
+            catch (Exception)
+            {
+                user.PasswordHash = hashAnterior;
+                user.DebeCambiarPassword = debeCambiarAnterior;
+                await _userManager.UpdateAsync(user);
+
+                await RegistrarBitacoraRecuperacion(user.Id, user.Email!, "Fallido", "No fue posible enviar el correo de recuperación");
+
+                return (false, "No se pudo conectar con el servidor. Verifica tu conexión o intenta más tarde.");
+            }
+
+            await RegistrarBitacoraRecuperacion(user.Id, user.Email!, "Exitoso", "Contraseña temporal enviada por correo");
 
             return (
-                true,
-                "Se ha enviado una contraseña temporal al correo registrado."
-
-            );
+              true,
+              "Se ha enviado una contraseña temporal al correo registrado."
+          );
         }
 
+        private async Task RegistrarBitacoraRecuperacion(string userId, string email, string resultado, string descripcion)
+        {
+            _context.Bitacoras.Add(new Bitacora
+            {
+                UserId = userId,
+                Accion = "RecuperarPassword",
+                Entidad = "AspNetUsers",
+                EntidadId = userId,
+                Detalle = System.Text.Json.JsonSerializer.Serialize(new { email, resultado, descripcion }),
+                Ip = null
+            });
+            await _context.SaveChangesAsync();
+        }
 
 
         private string GenerarPasswordTemporal()
