@@ -75,6 +75,7 @@ async function confirmarResetPassword() {
 }
 
   const roles = ['Todos', 'Vecino', 'Analista', 'Empleado', 'Administrador']
+  const etiquetaRol = (r) => (r === 'Empleado' ? 'Operario' : r)
   const usuariosFiltrados = filtroRol === 'Todos'
     ? usuarios
     : usuarios.filter((u) => u.roles.includes(filtroRol))
@@ -102,7 +103,7 @@ async function confirmarResetPassword() {
             </div>
             <div>
               <p className="font-display font-semibold text-[var(--color-verde-institucional)]">Nuevo Empleado Municipal</p>
-              <p className="text-sm text-[var(--color-tinta)]/70">Analista o Empleado, con sus áreas asignadas.</p>
+              <p className="text-sm text-[var(--color-tinta)]/70">Analista u Operario, con sus áreas asignadas.</p>
             </div>
           </Link>
         </div>
@@ -118,7 +119,7 @@ async function confirmarResetPassword() {
                   : 'border-[var(--color-azul-piedra)]/30 text-[var(--color-azul-piedra)] hover:border-[var(--color-ocre)]'
               }`}
             >
-              {r}
+              {etiquetaRol(r)}
             </button>
           ))}
         </div>
@@ -130,7 +131,7 @@ async function confirmarResetPassword() {
           {cargandoLista ? (
             <p className="text-sm text-[var(--color-tinta)]/60 p-6">Cargando...</p>
           ) : usuariosFiltrados.length === 0 ? (
-            <p className="text-sm text-[var(--color-tinta)]/60 p-6">No hay usuarios para este filtro.</p>
+            <p className="text-sm text-[var(--color-tinta)]/60 p-6">Actualmente no existen registros para mostrar.</p>
           ) : (
             <ul className="divide-y divide-[var(--color-azul-piedra)]/10">
               {usuariosFiltrados.map((u) => (
@@ -141,7 +142,7 @@ async function confirmarResetPassword() {
                       <span className="text-[var(--color-tinta)] font-medium">{u.nombre} {u.apellido}</span>
                       {u.roles.map((r) => (
                         <span key={r} className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-azul-piedra)]/10 text-[var(--color-azul-piedra)]">
-                          {r}
+                          {etiquetaRol(r)}
                         </span>
                       ))}
                     </div>

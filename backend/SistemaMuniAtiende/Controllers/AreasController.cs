@@ -15,6 +15,7 @@ namespace SistemaMuniAtiende.Controllers
         private readonly AppDbContext _context;
         private readonly IMemoryCache _cache;
         private const string CacheKey = "areas_todas";
+        private const int LongitudMaxNombre = 30;
         private static readonly TimeSpan Duracion = TimeSpan.FromMinutes(30);
 
         public AreasController(AppDbContext context, IMemoryCache cache)
@@ -29,7 +30,7 @@ namespace SistemaMuniAtiende.Controllers
             if (_cache.TryGetValue(CacheKey, out List<Area>? areasCache))
                 return Ok(areasCache);
 
-            var areas = await _context.Areas.OrderBy(a => a.Nombre).ToListAsync();
+            var areas = await _context.Areas.AsNoTracking().OrderBy(a => a.Nombre).ToListAsync();
             _cache.Set(CacheKey, areas, Duracion);
 
             return Ok(areas);
@@ -39,16 +40,24 @@ namespace SistemaMuniAtiende.Controllers
         [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> Crear(CrearAreaRequest req)
         {
-            if (string.IsNullOrWhiteSpace(req.Nombre))
+            var nombre = (req.Nombre ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(nombre))
                 return BadRequest(new { mensaje = "El nombre es obligatorio." });
 
-            var existe = await _context.Areas.AnyAsync(a => a.Nombre.ToLower() == req.Nombre.ToLower());
+            if (nombre.Length > LongitudMaxNombre)
+                return BadRequest(new { mensaje = $"El nombre no puede superar los {LongitudMaxNombre} caracteres." });
+
+            if (!req.AplicaQueja && !req.AplicaReclamo && !req.AplicaSugerencia)
+                return BadRequest(new { mensaje = "Debes seleccionar al menos un tipo de caso." });
+
+            var existe = await _context.Areas.AnyAsync(a => a.Nombre.Trim().ToLower() == nombre.ToLower());
             if (existe)
                 return BadRequest(new { mensaje = "Ya existe un área con ese nombre." });
 
             var area = new Area
             {
-                Nombre = req.Nombre.Trim(),
+                Nombre = nombre,
                 AplicaQueja = req.AplicaQueja,
                 AplicaReclamo = req.AplicaReclamo,
                 AplicaSugerencia = req.AplicaSugerencia
@@ -69,12 +78,25 @@ namespace SistemaMuniAtiende.Controllers
             var area = await _context.Areas.FindAsync(id);
             if (area == null) return NotFound(new { mensaje = "Área no encontrada." });
 
-            area.Nombre = req.Nombre.Trim();
+            var nombre = (req.Nombre ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(nombre))
+                return BadRequest(new { mensaje = "El nombre es obligatorio." });
+
+            if (nombre.Length > LongitudMaxNombre)
+                return BadRequest(new { mensaje = $"El nombre no puede superar los {LongitudMaxNombre} caracteres." });
+
+            if (!req.AplicaQueja && !req.AplicaReclamo && !req.AplicaSugerencia)
+                return BadRequest(new { mensaje = "Debes seleccionar al menos un tipo de caso." });
+
+            var existe = await _context.Areas.AnyAsync(a => a.Id != id && a.Nombre.Trim().ToLower() == nombre.ToLower());
+            if (existe)
+                return BadRequest(new { mensaje = "Ya existe un área con ese nombre." });
+
+            area.Nombre = nombre;
             area.AplicaQueja = req.AplicaQueja;
             area.AplicaReclamo = req.AplicaReclamo;
-
             area.AplicaSugerencia = req.AplicaSugerencia;
-            
             area.Activo = req.Activo;
 
             await _context.SaveChangesAsync();
@@ -83,6 +105,7 @@ namespace SistemaMuniAtiende.Controllers
 
             return Ok(area);
         }
+
         [HttpDelete("{id}")]
         [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> Eliminar(int id)
@@ -95,6 +118,11 @@ namespace SistemaMuniAtiende.Controllers
 
             if (tieneEmpleadosAsignados)
                 return BadRequest(new { mensaje = "No se puede eliminar el área porque tiene Analistas o Empleados asignados. Reasígnalos o desactiva el área en su lugar." });
+
+            var tieneCasos = await _context.Casos.AnyAsync(c => c.AreaId == id);
+
+            if (tieneCasos)
+                return BadRequest(new { mensaje = "No se puede eliminar el área porque tiene casos asociados. Desactiva el área en su lugar." });
 
             _context.Areas.Remove(area);
             await _context.SaveChangesAsync();
