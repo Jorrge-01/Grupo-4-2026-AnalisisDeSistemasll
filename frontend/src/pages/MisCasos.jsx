@@ -110,7 +110,7 @@ export default function MisCasos() {
       const formData = new FormData()
       formData.append('respuesta', respuestaInformacion.trim())
       fotosRespuesta.forEach((foto) => {
-        if (foto) formData.append('archivos', foto)
+        if (foto?.file) formData.append('archivos', foto.file)
       })
       if (documentoRespuesta) {
         formData.append('archivos', documentoRespuesta)
@@ -144,11 +144,8 @@ export default function MisCasos() {
       })
 
       setCasos(casosActualizados)
-
     } catch (err) {
-      setMensajeRespuesta(
-        err.message || 'No se pudo enviar la respuesta.'
-      )
+      setMensajeRespuesta(err.message || 'No se pudo enviar la respuesta.')
     } finally {
       setEnviandoRespuesta(false)
     }
@@ -249,7 +246,6 @@ export default function MisCasos() {
         </div>
       </main>
 
-      {/* MODAL DE DETALLE */}
       {casoSeleccionadoId && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
@@ -324,12 +320,10 @@ export default function MisCasos() {
 
                   {detalle.estado === 'PendienteInformacion' && detalle.solicitudInformacion && (
                     <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 space-y-4">
-
                       <div>
                         <p className="text-xs uppercase tracking-wide text-orange-700 font-semibold mb-1">
                           Información solicitada
                         </p>
-
                         <p className="text-sm text-orange-900 whitespace-pre-wrap">
                           {detalle.solicitudInformacion}
                         </p>
@@ -382,7 +376,6 @@ export default function MisCasos() {
                           {mensajeRespuesta}
                         </p>
                       )}
-
                     </div>
                   )}
 
