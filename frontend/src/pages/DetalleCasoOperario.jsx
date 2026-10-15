@@ -150,7 +150,9 @@ export default function DetalleCasoOperario() {
 
       const formData = new FormData()
       formData.append('resultado', resultadoTrabajo.trim())
-      fotosTrabajo.forEach((foto) => formData.append('archivos', foto))
+      fotosTrabajo.forEach((foto) => {
+        if (foto?.file) formData.append('archivos', foto.file)
+      })
 
       const res = await fetch(`${API_BASE_URL}/api/Casos/${id}/registrar-trabajo`, {
         method: 'POST',

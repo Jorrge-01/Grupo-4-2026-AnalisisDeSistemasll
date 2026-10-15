@@ -1,4 +1,6 @@
-﻿namespace SistemaMuniAtiende.DTOs
+﻿using Microsoft.AspNetCore.Http;
+
+namespace SistemaMuniAtiende.DTOs
 {
     public record CrearCasoRequest(
         int AreaId,
@@ -147,6 +149,12 @@
     DateTime? FechaTrabajo,
     List<ArchivoResponse> Archivos
 );
-    public record RegistrarTrabajoRequest(string Resultado);
+
+    public class RegistrarTrabajoRequest
+    {
+        public string Resultado { get; set; } = string.Empty;
+        public List<IFormFile>? Archivos { get; set; }
+    }
+
     public record SolicitarCorreccionRequest(string Correccion);
 }

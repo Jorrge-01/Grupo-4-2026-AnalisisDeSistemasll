@@ -390,14 +390,14 @@ namespace SistemaMuniAtiende.Services
             {
                 try
                 {
-                                await _plantillaCorreo.EnviarCorreoCasoAsync(
-                    vecinoInfo.Email,
-                    vecinoInfo.Nombre,
-                    $"Se necesita más información - {caso.Codigo} - Sistema QRDS",
-                    $"Necesitamos información adicional para continuar con tu caso {caso.Codigo}:",
-                    "Ingresa a \"Mis casos\" en tu Portal Municipal para responder.",
-                    ("Mensaje del analista", request.Mensaje.Trim())
-                );
+                    await _plantillaCorreo.EnviarCorreoCasoAsync(
+        vecinoInfo.Email,
+        vecinoInfo.Nombre,
+        $"Se necesita más información - {caso.Codigo} - Sistema QRDS",
+        $"Necesitamos información adicional para continuar con tu caso {caso.Codigo}:",
+        "Ingresa a \"Mis casos\" en tu Portal Municipal para responder.",
+        ("Mensaje del analista", request.Mensaje.Trim())
+    );
                 }
                 catch (Exception ex)
                 {
@@ -706,7 +706,7 @@ namespace SistemaMuniAtiende.Services
             return (true, "El trabajo fue iniciado correctamente.");
         }
 
-     
+
 
         public async Task<(bool Exito, string Mensaje)> AprobarTrabajoAsync(int casoId, string analistaId)
         {
@@ -1025,7 +1025,7 @@ namespace SistemaMuniAtiende.Services
         }
 
 
-       
+
 
         public async Task<(bool Exito, string Mensaje)> RegistrarTrabajoAsync(int casoId, string operarioId, RegistrarTrabajoRequest request)
         {
@@ -1050,6 +1050,45 @@ namespace SistemaMuniAtiende.Services
 
             if (caso.Estado != EstadoCaso.EnEjecucion)
                 return (false, "El caso no se encuentra en ejecución.");
+
+            var archivos = request.Archivos ?? new List<IFormFile>();
+
+            if (archivos.Count > 2)
+                return (false, "Solo puedes adjuntar un máximo de 2 fotos.");
+
+            foreach (var archivo in archivos)
+            {
+                if (archivo.Length == 0)
+                    return (false, $"El archivo {archivo.FileName} está vacío.");
+
+                if (archivo.Length > 5 * 1024 * 1024)
+                    return (false, $"El archivo {archivo.FileName} excede el tamaño máximo de 5 MB.");
+
+                var formato = Path.GetExtension(archivo.FileName).ToLowerInvariant();
+                var formatoValido = formato == ".png" || formato == ".jpg" || formato == ".jpeg";
+
+                if (!formatoValido)
+                    return (false, $"El archivo {archivo.FileName} tiene un formato no permitido. Usa PNG o JPG.");
+
+                if (!await ValidarFirmaArchivoAsync(archivo, false))
+                    return (false, $"El archivo {archivo.FileName} no es una imagen válida.");
+            }
+
+            foreach (var archivo in archivos)
+            {
+                var nombreSaneado = SanearNombreArchivo(archivo.FileName);
+                var url = await _blobStorageService.SubirArchivoAsync(archivo, casoId);
+
+                _context.ArchivosCaso.Add(new ArchivoCaso
+                {
+                    CasoId = casoId,
+                    NombreArchivo = nombreSaneado,
+                    RutaArchivo = url,
+                    TipoContenido = archivo.ContentType,
+                    TamanoBytes = archivo.Length,
+                    SubidoPorUserId = operarioId
+                });
+            }
 
             var trabajo = new TrabajoCaso
             {
