@@ -181,7 +181,7 @@ namespace SistemaMuniAtiende.Controllers
             {
                 return BadRequest(new
                 {
-                    mensaje = "No se puede eliminar la aldea porque hay vecinos registrados con ella. Desactívala en su lugar."
+                    mensaje = "La aldea o comunidad no puede eliminarse porque posee información asociada."
                 });
             }
 
