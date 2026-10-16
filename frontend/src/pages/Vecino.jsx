@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageSquarePlus, ClipboardList, Clock, FileText } from 'lucide-react'
+import { MessageSquarePlus, ClipboardList, UserCircle, Clock, FileText } from 'lucide-react'
 import HeaderInterno from '../components/HeaderInterno'
 import { apiFetch } from '../lib/api'
 
@@ -74,34 +74,49 @@ export default function Vecino() {
         </div>
 
         {/* Acciones principales */}
-        <div className="grid sm:grid-cols-2 gap-6 mb-10">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           <Link
             to="/vecino/casos/nuevo"
-            className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-8 hover:border-[var(--color-ocre)]/40 hover:shadow-sm transition-all"
+            className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-6 hover:border-[var(--color-ocre)]/40 hover:shadow-sm transition-all"
           >
-            <div className="h-14 w-14 rounded-lg bg-[var(--color-verde-institucional)]/10 flex items-center justify-center mb-5">
-              <MessageSquarePlus className="h-7 w-7 text-[var(--color-verde-institucional)]" />
+            <div className="h-11 w-11 rounded-lg bg-[var(--color-verde-institucional)]/10 flex items-center justify-center mb-4">
+              <MessageSquarePlus className="h-5 w-5 text-[var(--color-verde-institucional)]" />
             </div>
-            <p className="font-display text-2xl font-semibold text-[var(--color-verde-institucional)] mb-2">
+            <p className="font-display text-lg font-semibold text-[var(--color-verde-institucional)] mb-1">
               Registrar un caso
             </p>
-            <p className="text-base text-[var(--color-tinta)]/70">
+            <p className="text-sm text-[var(--color-tinta)]/70">
               Reporta una queja, reclamo, denuncia o sugerencia.
             </p>
           </Link>
 
           <Link
             to="/vecino/casos"
-            className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-8 hover:border-[var(--color-ocre)]/40 hover:shadow-sm transition-all"
+            className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-6 hover:border-[var(--color-ocre)]/40 hover:shadow-sm transition-all"
           >
-            <div className="h-14 w-14 rounded-lg bg-[var(--color-verde-institucional)]/10 flex items-center justify-center mb-5">
-              <ClipboardList className="h-7 w-7 text-[var(--color-verde-institucional)]" />
+            <div className="h-11 w-11 rounded-lg bg-[var(--color-verde-institucional)]/10 flex items-center justify-center mb-4">
+              <ClipboardList className="h-5 w-5 text-[var(--color-verde-institucional)]" />
             </div>
-            <p className="font-display text-2xl font-semibold text-[var(--color-verde-institucional)] mb-2">
+            <p className="font-display text-lg font-semibold text-[var(--color-verde-institucional)] mb-1">
               Mis casos
             </p>
-            <p className="text-base text-[var(--color-tinta)]/70">
+            <p className="text-sm text-[var(--color-tinta)]/70">
               Da seguimiento al estado de tus casos registrados.
+            </p>
+          </Link>
+
+          <Link
+            to="/vecino/perfil"
+            className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-6 hover:border-[var(--color-ocre)]/40 hover:shadow-sm transition-all"
+          >
+            <div className="h-11 w-11 rounded-lg bg-[var(--color-verde-institucional)]/10 flex items-center justify-center mb-4">
+              <UserCircle className="h-5 w-5 text-[var(--color-verde-institucional)]" />
+            </div>
+            <p className="font-display text-lg font-semibold text-[var(--color-verde-institucional)] mb-1">
+              Mi perfil
+            </p>
+            <p className="text-sm text-[var(--color-tinta)]/70">
+              Actualiza tu dirección, aldea y teléfono, o cambia tu contraseña.
             </p>
           </Link>
         </div>
