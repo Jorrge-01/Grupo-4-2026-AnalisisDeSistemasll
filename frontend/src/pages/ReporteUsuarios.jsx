@@ -198,11 +198,18 @@ export default function ReporteUsuarios() {
               >
                 <option value="">Todos</option>
 
-                {roles.map((rol) => (
-                  <option key={rol} value={rol}>
-                    {rol}
-                  </option>
-                ))}
+                {roles.map((rol) => {
+                  const nombreRol = typeof rol === 'string' ? rol : rol.nombre
+
+                  return (
+                    <option
+                      key={typeof rol === 'string' ? rol : rol.id ?? nombreRol}
+                      value={nombreRol}
+                    >
+                      {nombreRol}
+                    </option>
+                  )
+                })}
               </select>
             </div>
 
@@ -218,11 +225,19 @@ export default function ReporteUsuarios() {
               >
                 <option value="">Todas</option>
 
-                {aldeas.map((aldea) => (
-                  <option key={aldea} value={aldea}>
-                    {aldea}
-                  </option>
-                ))}
+                {aldeas.map((aldea) => {
+                  const nombreAldea =
+                    typeof aldea === 'string' ? aldea : aldea.nombre
+
+                  return (
+                    <option
+                      key={typeof aldea === 'string' ? aldea : aldea.id ?? nombreAldea}
+                      value={nombreAldea}
+                    >
+                      {nombreAldea}
+                    </option>
+                  )
+                })}
               </select>
             </div>
 
