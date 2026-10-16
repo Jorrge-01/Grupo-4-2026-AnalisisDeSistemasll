@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ClipboardList, Clock, CheckCircle2, AlertCircle, Search, X, FileText, MapPin, Phone ,History } from 'lucide-react'
+import { ClipboardList, Clock, CheckCircle2, AlertCircle, Search, X, MapPin, Phone ,History } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import HeaderInterno from '../components/HeaderInterno'
+import EvidenciaCaso from '../components/EvidenciaCaso'
 import { apiFetch } from '../lib/api'
 
 const ESTADOS_ACTIVOS = ['Asignada', 'EnValidacion', 'PendienteInformacion', 'EnAnalisis', 'AsignadaAOperario', 'EnEjecucion', 'TrabajoRealizado', 'EnVerificacion', 'Reabierta']
@@ -53,38 +54,6 @@ function formatearFecha(fecha) {
 function formatearFechaHora(fecha) {
   if (!fecha) return '-'
   return new Date(fecha).toLocaleString('es-GT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
-
-function GrillaArchivos({ archivos }) {
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {archivos.map((archivo) => {
-        const esImagen = archivo.tipoContenido?.startsWith('image/')
-        return (
-          <a
-            key={archivo.id}
-            href={archivo.rutaArchivo}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block group"
-          >
-            {esImagen ? (
-              <div className="h-20 rounded-md overflow-hidden border border-[var(--color-azul-piedra)]/20 group-hover:border-[var(--color-ocre)] transition-colors">
-                <img src={archivo.rutaArchivo} alt={archivo.nombreArchivo} className="h-full w-full object-cover" />
-              </div>
-            ) : (
-              <div className="h-20 rounded-md border border-[var(--color-azul-piedra)]/20 bg-white/50 flex flex-col items-center justify-center gap-1 px-1 group-hover:border-[var(--color-ocre)] transition-colors">
-                <FileText className="h-5 w-5 text-[var(--color-ocre)]" />
-                <span className="text-[10px] text-[var(--color-tinta)] text-center truncate max-w-full">
-                  {archivo.nombreArchivo}
-                </span>
-              </div>
-            )}
-          </a>
-        )
-      })}
-    </div>
-  )
 }
 
 export default function AdminCasos() {
@@ -470,12 +439,7 @@ export default function AdminCasos() {
                   </div>
 
                   {detalle.archivos && detalle.archivos.length > 0 && (
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-[var(--color-tinta)]/50 mb-2">
-                        Evidencia adjunta ({detalle.archivos.length})
-                      </p>
-                      <GrillaArchivos archivos={detalle.archivos} />
-                    </div>
+                    <EvidenciaCaso archivos={detalle.archivos} compacto />
                   )}
 
                   <div>
@@ -568,12 +532,7 @@ export default function AdminCasos() {
                   )}
 
                   {solucion.archivos && solucion.archivos.length > 0 && (
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-[var(--color-tinta)]/50 mb-2">
-                        Evidencia ({solucion.archivos.length})
-                      </p>
-                      <GrillaArchivos archivos={solucion.archivos} />
-                    </div>
+                    <EvidenciaCaso archivos={solucion.archivos} compacto />
                   )}
                 </div>
               </>

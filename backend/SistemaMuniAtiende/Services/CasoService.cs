@@ -12,10 +12,6 @@ namespace SistemaMuniAtiende.Services
         private readonly BolsonCasosService _bolsonCasosService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly BlobStorageService _blobStorageService;
-        private readonly IEmailService _emailService;
-
-
-
         private readonly PlantillaCorreoService _plantillaCorreo;
 
         public CasoService(AppDbContext context, BolsonCasosService bolsonCasosService, UserManager<ApplicationUser> userManager, BlobStorageService blobStorageService, PlantillaCorreoService plantillaCorreo)
@@ -27,60 +23,6 @@ namespace SistemaMuniAtiende.Services
             _plantillaCorreo = plantillaCorreo;
         }
 
-        private async Task EnviarCorreoCasoAsync(string email, string nombreDestinatario, string asunto, string titulo, string mensaje, (string Etiqueta, string Valor)? destacado = null)
-        {
-            var bloqueDestacado = destacado.HasValue
-                ? $"""
-                   <table role="presentation" cellpadding="0" cellspacing="0" style="background-color:#EEF1F5; border-radius:8px; width:100%; margin-bottom:24px;">
-                     <tr>
-                       <td style="padding:16px 20px;">
-                         <p style="margin:0; color:#475569; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">{destacado.Value.Etiqueta}</p>
-                         <p style="margin:8px 0 0; color:#0F172A; font-size:17px; font-weight:600; line-height:1.4;">{destacado.Value.Valor}</p>
-                       </td>
-                     </tr>
-                   </table>
-                   """
-                : "";
-
-            await _emailService.EnviarAsync(
-                email,
-                asunto,
-                $"""
-                <!DOCTYPE html>
-                <html lang="es">
-                <body style="margin:0; padding:0; background-color:#EEF1F5; font-family:'Segoe UI', Arial, sans-serif;">
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EEF1F5; padding:32px 0;">
-                    <tr>
-                      <td align="center">
-                        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#F8FAFC; border-radius:10px; overflow:hidden;">
-                          <tr>
-                            <td style="background-color:#0F172A; padding:28px 32px;" align="center">
-                              <div style="width:48px; height:48px; border-radius:50%; background-color:#0D9488; display:inline-block; line-height:48px; text-align:center; color:#F8FAFC; font-size:20px; font-weight:600;">M</div>
-                              <p style="margin:12px 0 0; color:#F8FAFC; font-size:15px; letter-spacing:0.5px; text-transform:uppercase;">Municipalidad</p>
-                            </td>
-                          </tr>
-                          <tr><td style="height:6px; background-color:#0D9488;"></td></tr>
-                          <tr>
-                            <td style="padding:36px 32px;">
-                              <h1 style="margin:0 0 16px; color:#0F172A; font-size:22px;">Hola {nombreDestinatario},</h1>
-                              <p style="margin:0 0 16px; color:#334155; font-size:15px; line-height:1.6;">{titulo}</p>
-                              {bloqueDestacado}
-                              <p style="margin:0; color:#334155; font-size:15px; line-height:1.6;">{mensaje}</p>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="padding:20px 32px; background-color:#0F172A;" align="center">
-                              <p style="margin:0; color:#94A3B8; font-size:12px;">Este es un correo automático, por favor no respondas a este mensaje.</p>
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                    </tr>
-                  </table>
-                </body>
-                </html>
-                """);
-        }
 
         public async Task<(bool Exito, string Mensaje, CasoCreadoResponse? Caso)> RegistrarQuejaAsync(
             string vecinoId,
@@ -214,7 +156,7 @@ namespace SistemaMuniAtiende.Services
 
             var archivos = await _context.ArchivosCaso
                 .Where(a => a.CasoId == caso.Id)
-                .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido))
+                .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido, a.SubidoPorUserId != null))
                 .ToListAsync();
 
             var solicitudInformacion = await _context.SolicitudesInformacionCaso
@@ -299,7 +241,7 @@ namespace SistemaMuniAtiende.Services
 
                     _context.ArchivosCaso
                         .Where(a => a.CasoId == c.Id)
-                        .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido))
+                        .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido, a.SubidoPorUserId != null))
                         .ToList()
                 ))
                 .FirstOrDefaultAsync();
@@ -673,7 +615,7 @@ namespace SistemaMuniAtiende.Services
 
                     _context.ArchivosCaso
                         .Where(a => a.CasoId == i.CasoId)
-                        .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido))
+                        .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido, a.SubidoPorUserId != null))
                         .ToList()
                 ))
                 .FirstOrDefaultAsync();
@@ -738,12 +680,13 @@ namespace SistemaMuniAtiende.Services
             {
                 try
                 {
-                    await EnviarCorreoCasoAsync(
+                    await _plantillaCorreo.EnviarCorreoCasoAsync(
                         vecinoResuelto.Email,
                         vecinoResuelto.Nombre,
+                        $"Tu caso {caso.Codigo} ha sido resuelto correctamente - Sistema QRDS",
                         $"Tu caso {caso.Codigo} ha sido resuelto correctamente.",
                         "Puedes revisar el detalle completo desde \"Mis casos\" en tu Portal Municipal. Gracias por ayudarnos a mejorar los servicios municipales.",
-                        null
+                        ("Código del caso", caso.Codigo)
                     );
                 }
                 catch (Exception ex)
@@ -801,6 +744,26 @@ namespace SistemaMuniAtiende.Services
             caso.Estado = EstadoCaso.EnEjecucion;
 
             await _context.SaveChangesAsync();
+
+            var operarioCorreccion = await _userManager.FindByIdAsync(instruccion.OperarioId);
+            if (operarioCorreccion?.Email != null)
+            {
+                try
+                {
+                    await _plantillaCorreo.EnviarCorreoCasoAsync(
+                        operarioCorreccion.Email,
+                        operarioCorreccion.Nombre,
+                        $"Corrección solicitada - {caso.Codigo} - Sistema QRDS",
+                        $"El analista solicitó una corrección en el trabajo del caso {caso.Codigo}.",
+                        "Ingresa al Portal Municipal para revisar la corrección y registrar nuevamente el trabajo realizado.",
+                        ("Corrección solicitada", request.Correccion.Trim())
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"No se pudo enviar el correo de corrección al operario: {ex.Message}");
+                }
+            }
 
             return (true, "Se solicitó una corrección al operario y el caso regresó a ejecución.");
         }
@@ -944,7 +907,7 @@ namespace SistemaMuniAtiende.Services
 
             var archivos = await _context.ArchivosCaso
                 .Where(a => a.CasoId == casoId)
-                .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido))
+                .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido, a.SubidoPorUserId != null))
                 .ToListAsync();
 
             var solicitudesInfo = await _context.SolicitudesInformacionCaso
@@ -1104,6 +1067,29 @@ namespace SistemaMuniAtiende.Services
 
             await _context.SaveChangesAsync();
 
+            if (!string.IsNullOrEmpty(caso.AnalistaId))
+            {
+                var analistaVerificacion = await _userManager.FindByIdAsync(caso.AnalistaId);
+                if (analistaVerificacion?.Email != null)
+                {
+                    try
+                    {
+                        await _plantillaCorreo.EnviarCorreoCasoAsync(
+                            analistaVerificacion.Email,
+                            analistaVerificacion.Nombre,
+                            $"Trabajo pendiente de verificación - {caso.Codigo} - Sistema QRDS",
+                            $"El operario registró el trabajo realizado del caso {caso.Codigo}.",
+                            "Ingresa al Portal Municipal para revisar el trabajo y aprobarlo o solicitar una corrección.",
+                            ("Código del caso", caso.Codigo)
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"No se pudo enviar el correo de verificación al analista: {ex.Message}");
+                    }
+                }
+            }
+
             return (true, "El trabajo fue registrado correctamente y el caso pasó a verificación.");
         }
 
@@ -1123,7 +1109,7 @@ namespace SistemaMuniAtiende.Services
             var archivos = instruccion != null
                 ? await _context.ArchivosCaso
                     .Where(a => a.CasoId == casoId && a.SubidoPorUserId == instruccion.OperarioId)
-                    .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido))
+                    .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido, a.SubidoPorUserId != null))
                     .ToListAsync()
                 : new List<ArchivoResponse>();
 
