@@ -43,20 +43,23 @@ namespace SistemaMuniAtiende.DTOs
 );
 
     public record CasoAnalistaDetalleResponse(
-        int Id,
-        string Codigo,
-        string Area,
-        string Aldea,
-        string Direccion,
-        string TelefonoContacto,
-        string Descripcion,
-        DateTime FechaRegistro,
-        string Estado,
-        string? Instruccion,
-        string? ResultadoTrabajo,
-        DateTime? FechaTrabajo,
-        List<ArchivoResponse> Archivos
-    );
+    int Id,
+    string Codigo,
+    string Area,
+    string Aldea,
+    string Direccion,
+    string TelefonoContacto,
+    string Descripcion,
+    DateTime FechaRegistro,
+    string Estado,
+    string? Instruccion,
+    string? ResultadoTrabajo,
+    DateTime? FechaTrabajo,
+    List<ArchivoResponse> Archivos,
+    string? SolicitudInformacion,
+    string? RespuestaInformacion,
+    DateTime? FechaRespuestaInformacion
+);
 
     public record SolicitarInformacionRequest(string Mensaje);
     public record ResponderInformacionRequest(string Respuesta);

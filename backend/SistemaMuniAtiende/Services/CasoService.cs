@@ -313,6 +313,7 @@ namespace SistemaMuniAtiende.Services
                         .Select(s => s.Mensaje)
                         .FirstOrDefault(),
 
+
                     _context.SolicitudesInformacionCaso
                         .Where(s => s.CasoId == c.Id)
                         .OrderByDescending(s => s.FechaSolicitud)
@@ -328,6 +329,8 @@ namespace SistemaMuniAtiende.Services
                 ))
                 .FirstOrDefaultAsync();
         }
+
+
 
         public async Task<(bool Exito, string Mensaje)> ValidarCasoAsync(int casoId, string analistaId)
         {
