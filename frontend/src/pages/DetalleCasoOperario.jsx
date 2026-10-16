@@ -8,12 +8,11 @@ import {
   ClipboardList,
   CheckCircle2,
   MessageSquare,
-  Paperclip,
-  FileText,
 } from 'lucide-react'
 
 import HeaderInterno from '../components/HeaderInterno'
 import SubidaEvidencia from '../components/SubidaEvidencia'
+import EvidenciaCaso from '../components/EvidenciaCaso'
 import { apiFetch, API_BASE_URL } from '../lib/api'
 
 function obtenerClaseEstado(estado) {
@@ -371,50 +370,9 @@ export default function DetalleCasoOperario() {
 
             </div>
 
-            {/* EVIDENCIA ADJUNTA */}
             {caso.archivos && caso.archivos.length > 0 && (
               <div className="mt-8">
-
-                <div className="flex items-center gap-2 mb-2">
-                  <Paperclip className="h-4 w-4 text-[var(--color-azul-piedra)]" />
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-tinta)]/50">
-                    Evidencia adjunta ({caso.archivos.length})
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {caso.archivos.map((archivo) => {
-                    const esImagen = archivo.tipoContenido?.startsWith('image/')
-
-                    return (
-                      <a
-                        key={archivo.id}
-                        href={archivo.rutaArchivo}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block group"
-                      >
-                        {esImagen ? (
-                          <div className="h-28 rounded-lg overflow-hidden border border-[var(--color-azul-piedra)]/20 group-hover:border-[var(--color-ocre)] transition-colors">
-                            <img
-                              src={archivo.rutaArchivo}
-                              alt={archivo.nombreArchivo}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-28 rounded-lg border border-[var(--color-azul-piedra)]/20 bg-white/50 flex flex-col items-center justify-center gap-1.5 px-2 group-hover:border-[var(--color-ocre)] transition-colors">
-                            <FileText className="h-6 w-6 text-[var(--color-ocre)]" />
-                            <span className="text-xs text-[var(--color-tinta)] text-center truncate max-w-full">
-                              {archivo.nombreArchivo}
-                            </span>
-                          </div>
-                        )}
-                      </a>
-                    )
-                  })}
-                </div>
-
+                <EvidenciaCaso archivos={caso.archivos} />
               </div>
             )}
 

@@ -39,7 +39,8 @@ namespace SistemaMuniAtiende.DTOs
     int Id,
     string NombreArchivo,
     string RutaArchivo,
-    string TipoContenido
+    string TipoContenido,
+    bool EsEvidenciaTrabajo
 );
 
     public record CasoAnalistaDetalleResponse(
