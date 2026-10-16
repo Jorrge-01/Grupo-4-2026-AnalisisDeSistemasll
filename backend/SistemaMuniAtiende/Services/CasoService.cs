@@ -299,11 +299,37 @@ namespace SistemaMuniAtiende.Services
 
                     _context.ArchivosCaso
                         .Where(a => a.CasoId == c.Id)
-                        .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido))
-                        .ToList()
+                        .Select(a => new ArchivoResponse(
+                            a.Id,
+                            a.NombreArchivo,
+                            a.RutaArchivo,
+                            a.TipoContenido))
+                        .ToList(),
+
+
+                    _context.SolicitudesInformacionCaso
+                        .Where(s => s.CasoId == c.Id)
+                        .OrderByDescending(s => s.FechaSolicitud)
+                        .Select(s => s.Mensaje)
+                        .FirstOrDefault(),
+
+                    _context.SolicitudesInformacionCaso
+                        .Where(s => s.CasoId == c.Id)
+                        .OrderByDescending(s => s.FechaSolicitud)
+                        .Select(s => s.Respuesta)
+                        .FirstOrDefault(),
+
+
+                    _context.SolicitudesInformacionCaso
+                        .Where(s => s.CasoId == c.Id)
+                        .OrderByDescending(s => s.FechaSolicitud)
+                        .Select(s => (DateTime?)s.FechaRespuesta)
+                        .FirstOrDefault()
                 ))
                 .FirstOrDefaultAsync();
         }
+
+
 
         public async Task<(bool Exito, string Mensaje)> ValidarCasoAsync(int casoId, string analistaId)
         {

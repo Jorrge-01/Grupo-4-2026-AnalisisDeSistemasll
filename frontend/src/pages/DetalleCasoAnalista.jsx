@@ -462,6 +462,51 @@ export default function DetalleCasoAnalista() {
             </div>
 
            {/* EVIDENCIA ADJUNTA */}
+
+            {/* INFORMACIÓN SOLICITADA AL VECINO */}
+            {caso.solicitudInformacion && (
+              <div className="mt-8">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-4 w-4 text-orange-600" />
+
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-tinta)]/50">
+                    Información solicitada al vecino
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-5">
+                  <p className="text-sm leading-6 text-orange-900 whitespace-pre-wrap">
+                    {caso.solicitudInformacion}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* RESPUESTA DEL VECINO */}
+            {caso.respuestaInformacion && (
+              <div className="mt-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-4 w-4 text-green-600" />
+
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-tinta)]/50">
+                    Respuesta del vecino
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-green-200 bg-green-50 p-5">
+                  <p className="text-sm leading-6 text-green-900 whitespace-pre-wrap">
+                    {caso.respuestaInformacion}
+                  </p>
+
+                  {caso.fechaRespuestaInformacion && (
+                    <p className="text-xs text-green-700 mt-3">
+                      Respondido el {formatearFecha(caso.fechaRespuestaInformacion)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
 {caso.archivos && caso.archivos.length > 0 && (
   <div className="mt-8">
 
