@@ -247,8 +247,6 @@ namespace SistemaMuniAtiende.Services
                 .FirstOrDefaultAsync();
         }
 
-
-
         public async Task<(bool Exito, string Mensaje)> ValidarCasoAsync(int casoId, string analistaId)
         {
             var caso = await _context.Casos
