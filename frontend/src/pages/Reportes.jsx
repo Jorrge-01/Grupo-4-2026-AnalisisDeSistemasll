@@ -50,18 +50,7 @@ export default function Reportes() {
           </p>
         </Link>
        
-          <div className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-6 opacity-60 cursor-not-allowed">
-            <div className="h-11 w-11 rounded-lg bg-[var(--color-verde-institucional)]/10 flex items-center justify-center mb-4">
-              <Clock className="h-5 w-5 text-[var(--color-verde-institucional)]" />
-            </div>
-            <p className="font-display text-lg font-semibold text-[var(--color-verde-institucional)] mb-1">
-              Cumplimiento de SLA
-            </p>
-            <p className="text-sm text-[var(--color-tinta)]/70">
-              Porcentaje de casos resueltos dentro del tiempo establecido.
-            </p>
-            <p className="text-xs text-[var(--color-ocre)] font-medium mt-2">Próximamente</p>
-          </div>
+          
         </div>
       </main>
     </div>

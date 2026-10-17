@@ -87,11 +87,16 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+var origenesPermitidos = new List<string> { "http://localhost:5173" };
+var frontendUrl = builder.Configuration["Cors:FrontendUrl"];
+if (!string.IsNullOrWhiteSpace(frontendUrl))
+    origenesPermitidos.Add(frontendUrl.Trim().TrimEnd('/'));
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins(origenesPermitidos.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
