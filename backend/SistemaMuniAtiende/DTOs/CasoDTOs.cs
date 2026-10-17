@@ -39,8 +39,11 @@ namespace SistemaMuniAtiende.DTOs
     int Id,
     string NombreArchivo,
     string RutaArchivo,
-    string TipoContenido
+    string TipoContenido,
+    bool EsEvidenciaTrabajo
 );
+
+    public record HistorialTrabajoItemResponse(string Tipo, DateTime Fecha, string Texto);
 
     public record CasoAnalistaDetalleResponse(
     int Id,
@@ -59,7 +62,10 @@ namespace SistemaMuniAtiende.DTOs
     string? SolicitudInformacion,
     string? RespuestaInformacion,
     DateTime? FechaRespuestaInformacion
-);
+)
+    {
+        public List<HistorialTrabajoItemResponse> HistorialTrabajo { get; init; } = new();
+    }
 
     public record SolicitarInformacionRequest(string Mensaje);
     public record ResponderInformacionRequest(string Respuesta);

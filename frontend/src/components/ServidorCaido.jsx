@@ -14,7 +14,7 @@ export default function ServidorCaido() {
         </h1>
 
         <p className="text-sm text-[var(--color-tinta)]/70 mb-8">
-          El sistema no está disponible en este momento. Puede ser un problema temporal de conexión o que el servicio esté en mantenimiento. Intenta de nuevo en unos minutos.
+          No se pudo conectar con el servidor. Verifica tu conexión o intenta más tarde.
         </p>
 
         <button

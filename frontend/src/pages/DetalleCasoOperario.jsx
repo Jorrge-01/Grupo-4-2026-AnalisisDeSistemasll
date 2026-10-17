@@ -8,13 +8,14 @@ import {
   ClipboardList,
   CheckCircle2,
   MessageSquare,
-  Paperclip,
-  FileText,
 } from 'lucide-react'
 
 import HeaderInterno from '../components/HeaderInterno'
 import SubidaEvidencia from '../components/SubidaEvidencia'
+import EvidenciaCaso from '../components/EvidenciaCaso'
 import { apiFetch, API_BASE_URL } from '../lib/api'
+
+const MSJ_ERROR_REGISTRO = 'No se pudo completar el registro. Intenta de nuevo.'
 
 function obtenerClaseEstado(estado) {
   switch (estado) {
@@ -64,17 +65,19 @@ export default function DetalleCasoOperario() {
   const [caso, setCaso] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
+  const [errorCarga, setErrorCarga] = useState('')
   const [procesando, setProcesando] = useState(false)
   const [mensaje, setMensaje] = useState('')
 
   const [resultadoTrabajo, setResultadoTrabajo] = useState('')
   const [procesandoTrabajo, setProcesandoTrabajo] = useState(false)
   const [fotosTrabajo, setFotosTrabajo] = useState([])
+  const [documentoTrabajo, setDocumentoTrabajo] = useState(null)
 
   async function cargarDetalle() {
     try {
       setCargando(true)
-      setError('')
+      setErrorCarga('')
 
       const token = localStorage.getItem('token')
 
@@ -89,7 +92,7 @@ export default function DetalleCasoOperario() {
 
       setCaso(data)
     } catch (err) {
-      setError(
+      setErrorCarga(
         err.message ||
           'No se pudo cargar el detalle del caso.'
       )
@@ -153,6 +156,7 @@ export default function DetalleCasoOperario() {
       fotosTrabajo.forEach((foto) => {
         if (foto?.file) formData.append('archivos', foto.file)
       })
+      if (documentoTrabajo) formData.append('archivos', documentoTrabajo)
 
       const res = await fetch(`${API_BASE_URL}/api/Casos/${id}/registrar-trabajo`, {
         method: 'POST',
@@ -162,20 +166,31 @@ export default function DetalleCasoOperario() {
         body: formData,
       })
 
-      const data = await res.json()
+      let data = null
+      try {
+        data = await res.json()
+      } catch {
+        data = null
+      }
 
       if (!res.ok) {
-        throw new Error(data.mensaje || 'No se pudo registrar el trabajo.')
+        if (res.status >= 500 || !data?.mensaje) {
+          throw new Error(MSJ_ERROR_REGISTRO)
+        }
+        throw new Error(data.mensaje)
       }
 
       setMensaje(data.mensaje)
       setResultadoTrabajo('')
       setFotosTrabajo([])
+      setDocumentoTrabajo(null)
 
       await cargarDetalle()
     } catch (err) {
       setError(
-        err.message || 'No se pudo registrar el trabajo.'
+        err instanceof TypeError || !err.message
+          ? MSJ_ERROR_REGISTRO
+          : err.message
       )
     } finally {
       setProcesandoTrabajo(false)
@@ -206,7 +221,7 @@ export default function DetalleCasoOperario() {
     )
   }
 
-  if (error || !caso) {
+  if (errorCarga || !caso) {
     return (
       <div className="min-h-[calc(100vh-73px)] bg-[var(--color-piedra)]">
         <HeaderInterno titulo="Detalle del caso" />
@@ -231,7 +246,7 @@ export default function DetalleCasoOperario() {
               </p>
 
               <p className="text-sm mt-1">
-                {error ||
+                {errorCarga ||
                   'El caso no existe o no está asignado a este operario.'}
               </p>
             </div>
@@ -371,50 +386,9 @@ export default function DetalleCasoOperario() {
 
             </div>
 
-            {/* EVIDENCIA ADJUNTA */}
             {caso.archivos && caso.archivos.length > 0 && (
               <div className="mt-8">
-
-                <div className="flex items-center gap-2 mb-2">
-                  <Paperclip className="h-4 w-4 text-[var(--color-azul-piedra)]" />
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-tinta)]/50">
-                    Evidencia adjunta ({caso.archivos.length})
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {caso.archivos.map((archivo) => {
-                    const esImagen = archivo.tipoContenido?.startsWith('image/')
-
-                    return (
-                      <a
-                        key={archivo.id}
-                        href={archivo.rutaArchivo}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block group"
-                      >
-                        {esImagen ? (
-                          <div className="h-28 rounded-lg overflow-hidden border border-[var(--color-azul-piedra)]/20 group-hover:border-[var(--color-ocre)] transition-colors">
-                            <img
-                              src={archivo.rutaArchivo}
-                              alt={archivo.nombreArchivo}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-28 rounded-lg border border-[var(--color-azul-piedra)]/20 bg-white/50 flex flex-col items-center justify-center gap-1.5 px-2 group-hover:border-[var(--color-ocre)] transition-colors">
-                            <FileText className="h-6 w-6 text-[var(--color-ocre)]" />
-                            <span className="text-xs text-[var(--color-tinta)] text-center truncate max-w-full">
-                              {archivo.nombreArchivo}
-                            </span>
-                          </div>
-                        )}
-                      </a>
-                    )
-                  })}
-                </div>
-
+                <EvidenciaCaso archivos={caso.archivos} />
               </div>
             )}
 
@@ -634,14 +608,14 @@ export default function DetalleCasoOperario() {
                     <div className="mt-5">
 
                       <label className="block text-sm font-medium text-cyan-900 mb-2">
-                        Fotos del trabajo realizado (opcional, máx. 2)
+                        Evidencia del trabajo realizado
                       </label>
 
                       <SubidaEvidencia
                         fotos={fotosTrabajo}
                         setFotos={setFotosTrabajo}
-                        documento={null}
-                        setDocumento={() => {}}
+                        documento={documentoTrabajo}
+                        setDocumento={setDocumentoTrabajo}
                       />
 
                     </div>

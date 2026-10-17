@@ -8,10 +8,9 @@ import {
   RefreshCw,
   MessageSquare,
   ClipboardList,
-  Paperclip,
-  FileText,
 } from 'lucide-react'
 import HeaderInterno from '../components/HeaderInterno'
+import EvidenciaCaso from '../components/EvidenciaCaso'
 import { apiFetch } from '../lib/api'
 
 function obtenerClaseEstado(estado) {
@@ -508,49 +507,11 @@ export default function DetalleCasoAnalista() {
             )}
 
 {caso.archivos && caso.archivos.length > 0 && (
-  <div className="mt-8">
-
-    <div className="flex items-center gap-2 mb-2">
-      <Paperclip className="h-4 w-4 text-[var(--color-azul-piedra)]" />
-      <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-tinta)]/50">
-        Evidencia adjunta ({caso.archivos.length})
-      </p>
-    </div>
-
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {caso.archivos.map((archivo) => {
-        const esImagen = archivo.tipoContenido?.startsWith('image/')
-
-        return (
-          <a            key={archivo.id}
-            href={archivo.rutaArchivo}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block group"
-          >
-            {esImagen ? (
-              <div className="h-28 rounded-lg overflow-hidden border border-[var(--color-azul-piedra)]/20 group-hover:border-[var(--color-ocre)] transition-colors">
-                <img
-                  src={archivo.rutaArchivo}
-                  alt={archivo.nombreArchivo}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="h-28 rounded-lg border border-[var(--color-azul-piedra)]/20 bg-white/50 flex flex-col items-center justify-center gap-1.5 px-2 group-hover:border-[var(--color-ocre)] transition-colors">
-                <FileText className="h-6 w-6 text-[var(--color-ocre)]" />
-                <span className="text-xs text-[var(--color-tinta)] text-center truncate max-w-full">
-                  {archivo.nombreArchivo}
-                </span>
+              <div className="mt-8">
+                <EvidenciaCaso archivos={caso.archivos} />
               </div>
             )}
-          </a>
-        )
-      })}
-    </div>
 
-  </div>
-)}
             {/* VERIFICACIÓN DEL TRABAJO */}
             {caso.estado === 'EnVerificacion' && (
               <div className="mt-8">
@@ -582,40 +543,61 @@ export default function DetalleCasoAnalista() {
 
                 </div>
 
-                {/* RESULTADO */}
-                <div>
+              </div>
+            )}
 
-                  <div className="flex items-center gap-2 mb-2">
+            {/* HISTORIAL DEL TRABAJO */}
+            {caso.historialTrabajo && caso.historialTrabajo.length > 0 && (
+              <div className="mt-8">
 
-                    <CheckCircle2 className="h-4 w-4 text-teal-700" />
+                <h2 className="font-display text-xl font-semibold text-[var(--color-verde-institucional)] mb-5">
+                  Historial del trabajo
+                </h2>
 
-                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-tinta)]/50">
-                      Trabajo realizado por el operario
-                    </p>
+                <div className="space-y-4">
+                  {caso.historialTrabajo.map((item, i) => {
+                    const esCorreccion = item.tipo === 'Correccion'
 
-                  </div>
+                    return (
+                      <div key={i}>
 
-                  <div className="rounded-lg border border-teal-200 bg-teal-50 p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          {esCorreccion ? (
+                            <MessageSquare className="h-4 w-4 text-amber-700" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 text-teal-700" />
+                          )}
 
-                    <p className="text-sm leading-6 text-teal-900 whitespace-pre-wrap">
-                      {caso.resultadoTrabajo || '-'}
-                    </p>
+                          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-tinta)]/50">
+                            {esCorreccion
+                              ? 'Corrección solicitada por el analista'
+                              : 'Trabajo realizado por el operario'}
+                            {' · '}
+                            {formatearFecha(item.fecha)}
+                          </p>
+                        </div>
 
-                  </div>
+                        <div
+                          className={
+                            esCorreccion
+                              ? 'rounded-lg border border-amber-300 bg-amber-50 p-5'
+                              : 'rounded-lg border border-teal-200 bg-teal-50 p-5'
+                          }
+                        >
+                          <p
+                            className={
+                              esCorreccion
+                                ? 'text-sm leading-6 text-amber-900 whitespace-pre-wrap'
+                                : 'text-sm leading-6 text-teal-900 whitespace-pre-wrap'
+                            }
+                          >
+                            {item.texto || '-'}
+                          </p>
+                        </div>
 
-                </div>
-
-                {/* FECHA */}
-                <div className="mt-5">
-
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-tinta)]/50">
-                    Fecha del trabajo
-                  </p>
-
-                  <p className="text-sm text-[var(--color-tinta)] mt-1">
-                    {formatearFecha(caso.fechaTrabajo)}
-                  </p>
-
+                      </div>
+                    )
+                  })}
                 </div>
 
               </div>

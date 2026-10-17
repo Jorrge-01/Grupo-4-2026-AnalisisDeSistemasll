@@ -5,6 +5,19 @@ import { apiFetch } from '../lib/api'
 
 const TAMANO_PAGINA = 25
 
+function aLista(valor) {
+  return Array.isArray(valor) ? valor : []
+}
+
+function aTexto(opcion) {
+  if (typeof opcion === 'string') return opcion
+  return opcion?.nombre ?? opcion?.name ?? ''
+}
+
+function authHeaders() {
+  return { Authorization: `Bearer ${localStorage.getItem('token')}` }
+}
+
 export default function ReporteUsuarios() {
   const navigate = useNavigate()
 
@@ -24,59 +37,41 @@ export default function ReporteUsuarios() {
   async function cargarFiltros() {
     try {
       const [rolesData, aldeasData] = await Promise.all([
-        apiFetch('/api/usuarios/roles', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }),
-        apiFetch('/api/usuarios/aldeas', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }),
+        apiFetch('/api/usuarios/roles', { headers: authHeaders() }),
+        apiFetch('/api/usuarios/aldeas', { headers: authHeaders() }),
       ])
 
-      setRoles(rolesData)
-      setAldeas(aldeasData)
+      setRoles(aLista(rolesData).map(aTexto).filter(Boolean))
+      setAldeas(aLista(aldeasData).map(aTexto).filter(Boolean))
     } catch (err) {
-      // Los filtros no deben impedir cargar el reporte
+      setRoles([])
+      setAldeas([])
     }
   }
 
-  async function cargar() {
+  async function cargar(paginaActual, rol, aldea, estado) {
     setCargando(true)
     setError('')
 
     try {
       const params = new URLSearchParams({
-        pagina: pagina.toString(),
-        tamano: TAMANO_PAGINA.toString(),
+        pagina: String(paginaActual),
+        tamano: String(TAMANO_PAGINA),
       })
 
-      if (filtroRol) {
-        params.append('rol', filtroRol)
-      }
+      if (rol) params.append('rol', rol)
+      if (aldea) params.append('aldea', aldea)
+      if (estado !== '') params.append('activo', estado)
 
-      if (filtroAldea) {
-        params.append('aldea', filtroAldea)
-      }
+      const data = await apiFetch(`/api/usuarios/reporte?${params.toString()}`, {
+        headers: authHeaders(),
+      })
 
-      if (filtroEstado !== '') {
-        params.append('activo', filtroEstado)
-      }
-
-      const data = await apiFetch(
-        `/api/usuarios/reporte?${params.toString()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      )
-
-      setUsuarios(data.registros)
-      setTotal(data.total)
+      setUsuarios(aLista(data?.registros ?? data?.items ?? data?.Registros))
+      setTotal(Number(data?.total ?? data?.Total ?? 0))
     } catch (err) {
+      setUsuarios([])
+      setTotal(0)
       setError('No se pudo cargar el reporte de usuarios.')
     } finally {
       setCargando(false)
@@ -88,27 +83,29 @@ export default function ReporteUsuarios() {
   }, [])
 
   useEffect(() => {
-    cargar()
+    cargar(pagina, filtroRol, filtroAldea, filtroEstado)
   }, [pagina])
 
   function handleFiltrar(e) {
     e.preventDefault()
-    setPagina(1)
 
-    setTimeout(() => {
-      cargar()
-    }, 0)
+    if (pagina === 1) {
+      cargar(1, filtroRol, filtroAldea, filtroEstado)
+    } else {
+      setPagina(1)
+    }
   }
 
   function handleLimpiar() {
     setFiltroRol('')
     setFiltroAldea('')
     setFiltroEstado('')
-    setPagina(1)
 
-    setTimeout(() => {
-      cargar()
-    }, 0)
+    if (pagina === 1) {
+      cargar(1, '', '', '')
+    } else {
+      setPagina(1)
+    }
   }
 
   function handleExportarCsv() {
@@ -133,23 +130,16 @@ export default function ReporteUsuarios() {
       u.aldea || '',
       u.telefono || '',
       u.activo ? 'Activo' : 'Inactivo',
-      u.fechaCreacion
-        ? new Date(u.fechaCreacion).toLocaleString('es-GT')
-        : '',
+      u.fechaCreacion ? new Date(u.fechaCreacion).toLocaleString('es-GT') : '',
     ])
 
     const csv = [encabezados, ...filas]
       .map((fila) =>
-        fila
-          .map((c) => `"${String(c).replace(/"/g, '""')}"`)
-          .join(',')
+        fila.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')
       )
       .join('\n')
 
-    const blob = new Blob(
-      ['\ufeff' + csv],
-      { type: 'text/csv;charset=utf-8;' }
-    )
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
 
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -172,7 +162,6 @@ export default function ReporteUsuarios() {
       <HeaderInterno titulo="Reporte de Usuarios" />
 
       <main className="max-w-6xl mx-auto px-6 py-10">
-
         <button
           onClick={() => navigate('/admin/reportes')}
           className="text-sm text-[var(--color-azul-piedra)] hover:text-[var(--color-ocre)] mb-6 transition-colors"
@@ -185,7 +174,6 @@ export default function ReporteUsuarios() {
           className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-6 mb-6"
         >
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-
             <div>
               <label className="block text-xs font-medium text-[var(--color-tinta)]/70 mb-1">
                 Rol
@@ -258,12 +246,10 @@ export default function ReporteUsuarios() {
                 Limpiar
               </button>
             </div>
-
           </div>
         </form>
 
         <div className="flex items-center justify-between mb-3">
-
           <p className="text-sm text-[var(--color-tinta)]/60">
             {total} {total === 1 ? 'usuario encontrado' : 'usuarios encontrados'}
           </p>
@@ -275,7 +261,6 @@ export default function ReporteUsuarios() {
           >
             Exportar página a CSV
           </button>
-
         </div>
 
         {error && (
@@ -285,62 +270,30 @@ export default function ReporteUsuarios() {
         )}
 
         <div className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 overflow-hidden">
-
           {cargando ? (
-            <p className="text-sm text-[var(--color-tinta)]/60 p-6">
-              Cargando...
-            </p>
+            <p className="text-sm text-[var(--color-tinta)]/60 p-6">Cargando...</p>
           ) : usuarios.length === 0 ? (
             <p className="text-sm text-[var(--color-tinta)]/60 p-6">
               No hay usuarios para los filtros seleccionados.
             </p>
           ) : (
             <div className="overflow-x-auto">
-
               <table className="w-full text-sm">
-
                 <thead>
                   <tr className="bg-[var(--color-verde-institucional)] text-[var(--color-piedra-clara)]">
-
-                    <th className="text-left px-4 py-3 font-medium">
-                      Nombre
-                    </th>
-
-                    <th className="text-left px-4 py-3 font-medium">
-                      Correo
-                    </th>
-
-                    <th className="text-left px-4 py-3 font-medium">
-                      Rol
-                    </th>
-
-                    <th className="text-left px-4 py-3 font-medium">
-                      CUI
-                    </th>
-
-                    <th className="text-left px-4 py-3 font-medium">
-                      Aldea
-                    </th>
-
-                    <th className="text-left px-4 py-3 font-medium">
-                      Teléfono
-                    </th>
-
-                    <th className="text-left px-4 py-3 font-medium">
-                      Estado
-                    </th>
-
+                    <th className="text-left px-4 py-3 font-medium">Nombre</th>
+                    <th className="text-left px-4 py-3 font-medium">Correo</th>
+                    <th className="text-left px-4 py-3 font-medium">Rol</th>
+                    <th className="text-left px-4 py-3 font-medium">CUI</th>
+                    <th className="text-left px-4 py-3 font-medium">Aldea</th>
+                    <th className="text-left px-4 py-3 font-medium">Teléfono</th>
+                    <th className="text-left px-4 py-3 font-medium">Estado</th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-[var(--color-azul-piedra)]/10">
-
                   {usuarios.map((u) => (
-                    <tr
-                      key={u.id}
-                      className="hover:bg-[var(--color-piedra)]/50"
-                    >
-
+                    <tr key={u.id} className="hover:bg-[var(--color-piedra)]/50">
                       <td className="px-4 py-3 text-[var(--color-tinta)]">
                         {u.nombre} {u.apellido}
                       </td>
@@ -378,26 +331,18 @@ export default function ReporteUsuarios() {
                           {u.activo ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
-
                     </tr>
                   ))}
-
                 </tbody>
-
               </table>
-
             </div>
           )}
-
         </div>
 
         {totalPaginas > 1 && (
           <div className="flex items-center justify-center gap-4 mt-6">
-
             <button
-              onClick={() =>
-                setPagina((p) => Math.max(1, p - 1))
-              }
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
               disabled={pagina === 1}
               className="text-sm text-[var(--color-azul-piedra)] hover:text-[var(--color-ocre)] disabled:opacity-30 transition-colors"
             >
@@ -409,20 +354,14 @@ export default function ReporteUsuarios() {
             </span>
 
             <button
-              onClick={() =>
-                setPagina((p) =>
-                  Math.min(totalPaginas, p + 1)
-                )
-              }
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
               disabled={pagina === totalPaginas}
               className="text-sm text-[var(--color-azul-piedra)] hover:text-[var(--color-ocre)] disabled:opacity-30 transition-colors"
             >
               Siguiente →
             </button>
-
           </div>
         )}
-
       </main>
     </div>
   )
