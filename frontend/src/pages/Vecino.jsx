@@ -1,11 +1,31 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageSquarePlus, ClipboardList, UserCircle, Clock, FileText } from 'lucide-react'
+import { MessageSquarePlus, ClipboardList, Clock, FileText } from 'lucide-react'
 import HeaderInterno from '../components/HeaderInterno'
 import { apiFetch } from '../lib/api'
 
+const ETIQUETAS_ESTADO = {
+  Registrada: 'Registrada',
+  Asignada: 'Asignada',
+  EnValidacion: 'En validación',
+  PendienteInformacion: 'Información pendiente',
+  EnAnalisis: 'En análisis',
+  AsignadaAOperario: 'Asignada a operario',
+  EnEjecucion: 'En ejecución',
+  TrabajoRealizado: 'Trabajo realizado',
+  EnVerificacion: 'En verificación',
+  Solucionada: 'Solucionada',
+  Finalizada: 'Finalizada',
+  NoProcedente: 'No procedente',
+}
+
+function obtenerEtiquetaEstado(estado) {
+  return ETIQUETAS_ESTADO[estado] || estado
+}
+
 function obtenerClaseEstado(estado) {
   const mapa = {
+    Registrada: 'bg-slate-100 text-slate-800',
     Asignada: 'bg-blue-100 text-blue-800',
     EnValidacion: 'bg-amber-100 text-amber-800',
     PendienteInformacion: 'bg-orange-100 text-orange-800',
@@ -15,7 +35,6 @@ function obtenerClaseEstado(estado) {
     TrabajoRealizado: 'bg-teal-100 text-teal-800',
     EnVerificacion: 'bg-yellow-100 text-yellow-800',
     Solucionada: 'bg-green-100 text-green-800',
-    Reabierta: 'bg-red-100 text-red-800',
     Finalizada: 'bg-emerald-100 text-emerald-800',
     NoProcedente: 'bg-gray-100 text-gray-800',
   }
@@ -38,7 +57,7 @@ export default function Vecino() {
         const data = await apiFetch('/api/Casos/mis-casos-vecino', {
           headers: { Authorization: `Bearer ${token}` },
         })
-        setCasos(data)
+        setCasos(Array.isArray(data) ? data : [])
       } catch {
         setCasos([])
       } finally {
@@ -57,7 +76,6 @@ export default function Vecino() {
       <HeaderInterno titulo="Mi Portal" />
 
       <main className="max-w-6xl mx-auto px-6 py-10">
-        {/* Resumen rápido */}
         <div className="grid sm:grid-cols-3 gap-4 mb-8">
           <div className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-5">
             <p className="text-xs uppercase tracking-wide text-[var(--color-azul-piedra)] font-semibold">Total de casos</p>
@@ -73,8 +91,7 @@ export default function Vecino() {
           </div>
         </div>
 
-        {/* Acciones principales */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        <div className="grid sm:grid-cols-2 gap-6 mb-10">
           <Link
             to="/vecino/casos/nuevo"
             className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-6 hover:border-[var(--color-ocre)]/40 hover:shadow-sm transition-all"
@@ -104,24 +121,8 @@ export default function Vecino() {
               Da seguimiento al estado de tus casos registrados.
             </p>
           </Link>
-
-          <Link
-            to="/vecino/perfil"
-            className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-6 hover:border-[var(--color-ocre)]/40 hover:shadow-sm transition-all"
-          >
-            <div className="h-11 w-11 rounded-lg bg-[var(--color-verde-institucional)]/10 flex items-center justify-center mb-4">
-              <UserCircle className="h-5 w-5 text-[var(--color-verde-institucional)]" />
-            </div>
-            <p className="font-display text-lg font-semibold text-[var(--color-verde-institucional)] mb-1">
-              Mi perfil
-            </p>
-            <p className="text-sm text-[var(--color-tinta)]/70">
-              Actualiza tu dirección, aldea y teléfono, o cambia tu contraseña.
-            </p>
-          </Link>
         </div>
 
-        {/* Casos recientes */}
         <div className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 overflow-hidden">
           <div className="flex items-center justify-between p-6 pb-4">
             <h2 className="font-display text-lg font-semibold text-[var(--color-verde-institucional)]">
@@ -152,7 +153,7 @@ export default function Vecino() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-[var(--color-tinta)]">{c.codigo}</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${obtenerClaseEstado(c.estado)}`}>
-                        {c.estado}
+                        {obtenerEtiquetaEstado(c.estado)}
                       </span>
                     </div>
                     <p className="text-sm text-[var(--color-tinta)]/60 truncate mt-0.5">
