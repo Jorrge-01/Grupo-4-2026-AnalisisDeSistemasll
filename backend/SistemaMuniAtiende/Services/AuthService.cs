@@ -42,21 +42,6 @@ namespace SistemaMuniAtiende.Services
             string? passwordTemporalGenerada = generarPasswordTemporal ? GenerarPasswordTemporal() : null;
             var passwordAUsar = generarPasswordTemporal ? passwordTemporalGenerada! : req.Password!;
 
-            var user = new ApplicationUser
-            {
-                UserName = req.Email,
-                Email = req.Email,
-                Nombre = req.Nombre,
-                Apellido = req.Apellido,
-                DebeCambiarPassword = generarPasswordTemporal
-            };
-
-            var result = await _userManager.CreateAsync(user, passwordAUsar);
-            if (!result.Succeeded)
-                return (false, string.Join(" | ", result.Errors.Select(e => e.Description)));
-
-            await _userManager.AddToRoleAsync(user, req.Rol);
-
             if (req.Rol == "Vecino")
             {
                 if (string.IsNullOrWhiteSpace(req.Cui))
@@ -70,27 +55,78 @@ namespace SistemaMuniAtiende.Services
 
                 if (!req.Cui.EndsWith("0110"))
                     return (false, "El CUI ingresado no corresponde a un vecino registrado en este municipio.");
+            }
 
-                _context.PerfilesVecino.Add(new PerfilVecino
+            var areas = new List<Area>();
+            if (req.Rol is "Analista" or "Empleado")
+            {
+                if (req.AreaIds == null || req.AreaIds.Count == 0)
+                    return (false, "Debe asignar al menos un área.");
+
+                areas = await _context.Areas.Where(a => req.AreaIds.Contains(a.Id)).ToListAsync();
+                if (areas.Count != req.AreaIds.Count)
+                    return (false, "Una o más áreas seleccionadas no existen.");
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = req.Email,
+                Email = req.Email,
+                Nombre = req.Nombre,
+                Apellido = req.Apellido,
+                DebeCambiarPassword = generarPasswordTemporal
+            };
+
+            var result = await _userManager.CreateAsync(user, passwordAUsar);
+            if (!result.Succeeded)
+                return (false, string.Join(" | ", result.Errors.Select(e => e.Description)));
+
+            try
+            {
+                await _userManager.AddToRoleAsync(user, req.Rol);
+
+                if (req.Rol == "Vecino")
                 {
-                    UserId = user.Id,
-                    Cui = req.Cui,
-                    Direccion = req.Direccion ?? string.Empty,
-                    AldeaId = req.AldeaId,
-                    Telefono = req.Telefono ?? string.Empty,
-                    FechaNacimiento = DateTime.SpecifyKind(req.FechaNacimiento ?? DateTime.MinValue, DateTimeKind.Utc)
-                });
+                    _context.PerfilesVecino.Add(new PerfilVecino
+                    {
+                        UserId = user.Id,
+                        Cui = req.Cui!,
+                        Direccion = req.Direccion ?? string.Empty,
+                        AldeaId = req.AldeaId,
+                        Telefono = req.Telefono ?? string.Empty,
+                        FechaNacimiento = DateTime.SpecifyKind(req.FechaNacimiento ?? DateTime.MinValue, DateTimeKind.Utc)
+                    });
+                    await _context.SaveChangesAsync();
+                }
+                else if (req.Rol is "Analista" or "Empleado")
+                {
+                    var perfil = new PerfilEmpleado
+                    {
+                        UserId = user.Id
+                    };
+                    foreach (var area in areas)
+                        perfil.Areas.Add(area);
 
-                await _context.SaveChangesAsync();
+                    _context.PerfilesEmpleado.Add(perfil);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"No se pudo completar el registro de {req.Email}: {ex.Message}");
+                _context.ChangeTracker.Clear();
+                await _userManager.DeleteAsync(user);
+                return (false, "No se pudo completar el registro. Intenta de nuevo.");
+            }
 
+            if (req.Rol == "Vecino")
+            {
                 if (generarPasswordTemporal)
                 {
-                    // Lo creó el Administrador → correo con contraseña temporal
                     await EnviarCorreoCuentaCreadaPorAdmin(user, passwordTemporalGenerada!);
                     return (true, $"{req.Rol} registrado correctamente. Se envió la contraseña temporal por correo.");
                 }
 
-                // Se autoregistró él mismo → correo de bienvenida normal, sin contraseña
                 try
                 {
                     await _emailService.EnviarAsync(
@@ -176,23 +212,6 @@ namespace SistemaMuniAtiende.Services
             }
             else if (req.Rol is "Analista" or "Empleado")
             {
-                if (req.AreaIds == null || req.AreaIds.Count == 0)
-                    return (false, "Debe asignar al menos un área.");
-
-                var areas = await _context.Areas.Where(a => req.AreaIds.Contains(a.Id)).ToListAsync();
-                if (areas.Count != req.AreaIds.Count)
-                    return (false, "Una o más áreas seleccionadas no existen.");
-
-                var perfil = new PerfilEmpleado
-                {
-                    UserId = user.Id
-                };
-                foreach (var area in areas)
-                    perfil.Areas.Add(area);
-
-                _context.PerfilesEmpleado.Add(perfil);
-                await _context.SaveChangesAsync();
-
                 if (generarPasswordTemporal)
                 {
                     await EnviarCorreoCuentaCreadaPorAdmin(user, passwordTemporalGenerada!);
@@ -201,7 +220,6 @@ namespace SistemaMuniAtiende.Services
             }
             else if (req.Rol == "Administrador" && generarPasswordTemporal)
             {
-                // Un Administrador creando a otro Administrador
                 await EnviarCorreoCuentaCreadaPorAdmin(user, passwordTemporalGenerada!);
                 return (true, $"{req.Rol} registrado correctamente. Se envió la contraseña temporal por correo.");
             }
@@ -377,11 +395,12 @@ namespace SistemaMuniAtiende.Services
             user.DebeCambiarPassword = true;
 
             await _userManager.UpdateAsync(user);
-            try { 
-            await _emailService.EnviarAsync(
-                user.Email!,
-                "Recuperación de contraseña - Sistema QRDS",
-                $"""
+            try
+            {
+                await _emailService.EnviarAsync(
+                    user.Email!,
+                    "Recuperación de contraseña - Sistema QRDS",
+                    $"""
         <!DOCTYPE html>
         <html lang="es">
         <body style="margin:0; padding:0; background-color:#EEF1F5; font-family:'Segoe UI', Arial, sans-serif;">
