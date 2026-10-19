@@ -1,45 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageSquarePlus, ClipboardList, Clock, FileText } from 'lucide-react'
+import { MessageSquarePlus, ArrowRight, Clock, FileText } from 'lucide-react'
 import HeaderInterno from '../components/HeaderInterno'
 import { apiFetch } from '../lib/api'
-
-const ETIQUETAS_ESTADO = {
-  Registrada: 'Registrada',
-  Asignada: 'Asignada',
-  EnValidacion: 'En validación',
-  PendienteInformacion: 'Información pendiente',
-  EnAnalisis: 'En análisis',
-  AsignadaAOperario: 'Asignada a operario',
-  EnEjecucion: 'En ejecución',
-  TrabajoRealizado: 'Trabajo realizado',
-  EnVerificacion: 'En verificación',
-  Solucionada: 'Solucionada',
-  Finalizada: 'Finalizada',
-  NoProcedente: 'No procedente',
-}
-
-function obtenerEtiquetaEstado(estado) {
-  return ETIQUETAS_ESTADO[estado] || estado
-}
-
-function obtenerClaseEstado(estado) {
-  const mapa = {
-    Registrada: 'bg-slate-100 text-slate-800',
-    Asignada: 'bg-blue-100 text-blue-800',
-    EnValidacion: 'bg-amber-100 text-amber-800',
-    PendienteInformacion: 'bg-orange-100 text-orange-800',
-    EnAnalisis: 'bg-purple-100 text-purple-800',
-    AsignadaAOperario: 'bg-indigo-100 text-indigo-800',
-    EnEjecucion: 'bg-cyan-100 text-cyan-800',
-    TrabajoRealizado: 'bg-teal-100 text-teal-800',
-    EnVerificacion: 'bg-yellow-100 text-yellow-800',
-    Solucionada: 'bg-green-100 text-green-800',
-    Finalizada: 'bg-emerald-100 text-emerald-800',
-    NoProcedente: 'bg-gray-100 text-gray-800',
-  }
-  return mapa[estado] || 'bg-gray-100 text-gray-800'
-}
+import DetalleCasoVecino from '../components/DetalleCasoVecino'
+import { infoEstado } from '../lib/estadoCaso'
 
 function formatearFecha(fecha) {
   if (!fecha) return '-'
@@ -49,21 +14,23 @@ function formatearFecha(fecha) {
 export default function Vecino() {
   const [casos, setCasos] = useState([])
   const [cargando, setCargando] = useState(true)
+  const [casoSeleccionadoId, setCasoSeleccionadoId] = useState(null)
+
+  async function cargar() {
+    try {
+      const token = localStorage.getItem('token')
+      const data = await apiFetch('/api/Casos/mis-casos-vecino', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setCasos(Array.isArray(data) ? data : [])
+    } catch {
+      setCasos([])
+    } finally {
+      setCargando(false)
+    }
+  }
 
   useEffect(() => {
-    async function cargar() {
-      try {
-        const token = localStorage.getItem('token')
-        const data = await apiFetch('/api/Casos/mis-casos-vecino', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        setCasos(Array.isArray(data) ? data : [])
-      } catch {
-        setCasos([])
-      } finally {
-        setCargando(false)
-      }
-    }
     cargar()
   }, [])
 
@@ -91,37 +58,26 @@ export default function Vecino() {
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-6 mb-10">
-          <Link
-            to="/vecino/casos/nuevo"
-            className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-6 hover:border-[var(--color-ocre)]/40 hover:shadow-sm transition-all"
-          >
-            <div className="h-11 w-11 rounded-lg bg-[var(--color-verde-institucional)]/10 flex items-center justify-center mb-4">
-              <MessageSquarePlus className="h-5 w-5 text-[var(--color-verde-institucional)]" />
-            </div>
-            <p className="font-display text-lg font-semibold text-[var(--color-verde-institucional)] mb-1">
-              Registrar un caso
+        <Link
+          to="/vecino/casos/nuevo"
+          className="group flex flex-col sm:flex-row sm:items-center gap-5 bg-[var(--color-verde-institucional)] rounded-lg p-6 sm:p-8 mb-10 hover:opacity-95 transition-opacity"
+        >
+          <div className="h-14 w-14 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+            <MessageSquarePlus className="h-7 w-7 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-display text-xl font-semibold text-white mb-1">
+              ¿Tienes un problema en tu comunidad?
             </p>
-            <p className="text-sm text-[var(--color-tinta)]/70">
-              Reporta una queja, reclamo, denuncia o sugerencia.
+            <p className="text-sm text-white/80">
+              Reporta una queja, reclamo, denuncia o sugerencia y dale seguimiento desde aquí.
             </p>
-          </Link>
-
-          <Link
-            to="/vecino/casos"
-            className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-6 hover:border-[var(--color-ocre)]/40 hover:shadow-sm transition-all"
-          >
-            <div className="h-11 w-11 rounded-lg bg-[var(--color-verde-institucional)]/10 flex items-center justify-center mb-4">
-              <ClipboardList className="h-5 w-5 text-[var(--color-verde-institucional)]" />
-            </div>
-            <p className="font-display text-lg font-semibold text-[var(--color-verde-institucional)] mb-1">
-              Mis casos
-            </p>
-            <p className="text-sm text-[var(--color-tinta)]/70">
-              Da seguimiento al estado de tus casos registrados.
-            </p>
-          </Link>
-        </div>
+          </div>
+          <span className="inline-flex items-center justify-center gap-2 rounded-md bg-[var(--color-ocre)] px-5 py-2.5 text-sm font-semibold text-white group-hover:brightness-110 transition-all flex-shrink-0">
+            Registrar un caso
+            <ArrowRight className="h-4 w-4" />
+          </span>
+        </Link>
 
         <div className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 overflow-hidden">
           <div className="flex items-center justify-between p-6 pb-4">
@@ -148,28 +104,42 @@ export default function Vecino() {
           ) : (
             <ul className="divide-y divide-[var(--color-azul-piedra)]/10">
               {recientes.map((c) => (
-                <li key={c.id} className="flex items-center justify-between px-6 py-4 gap-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-[var(--color-tinta)]">{c.codigo}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${obtenerClaseEstado(c.estado)}`}>
-                        {obtenerEtiquetaEstado(c.estado)}
-                      </span>
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => setCasoSeleccionadoId(c.id)}
+                    className="w-full flex items-center justify-between px-6 py-4 gap-4 hover:bg-[var(--color-piedra)]/50 transition-colors text-left"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-[var(--color-tinta)]">{c.codigo}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${infoEstado(c.estado).clase}`}>
+                          {infoEstado(c.estado).etiqueta}
+                        </span>
+                      </div>
+                      <p className="text-sm text-[var(--color-tinta)]/60 truncate mt-0.5">
+                        {c.area} · {c.descripcion}
+                      </p>
                     </div>
-                    <p className="text-sm text-[var(--color-tinta)]/60 truncate mt-0.5">
-                      {c.area} · {c.descripcion}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-[var(--color-tinta)]/50 flex-shrink-0">
-                    <Clock className="h-3.5 w-3.5" />
-                    {formatearFecha(c.fechaRegistro)}
-                  </div>
+                    <div className="flex items-center gap-1.5 text-xs text-[var(--color-tinta)]/50 flex-shrink-0">
+                      <Clock className="h-3.5 w-3.5" />
+                      {formatearFecha(c.fechaRegistro)}
+                    </div>
+                  </button>
                 </li>
               ))}
             </ul>
           )}
         </div>
       </main>
+
+      {casoSeleccionadoId && (
+        <DetalleCasoVecino
+          casoId={casoSeleccionadoId}
+          onCerrar={() => setCasoSeleccionadoId(null)}
+          onActualizado={cargar}
+        />
+      )}
     </div>
   )
 }
