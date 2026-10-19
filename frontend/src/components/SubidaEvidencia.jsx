@@ -17,10 +17,18 @@ export default function SubidaEvidencia({ fotos, setFotos, documento, setDocumen
     return true
   }
 
+  function validarFormatoFoto(file) {
+    if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
+      setError('La foto debe ser un archivo PNG o JPG.')
+      return false
+    }
+    return true
+  }
+
   function handleAgregarFotos(e) {
     setError('')
     const nuevos = Array.from(e.target.files || [])
-    const validos = nuevos.filter(validarTamano)
+    const validos = nuevos.filter((file) => validarFormatoFoto(file) && validarTamano(file))
 
     if (fotos.length + validos.length > MAX_FOTOS) {
       setError(`Solo puedes adjuntar un máximo de ${MAX_FOTOS} fotos.`)

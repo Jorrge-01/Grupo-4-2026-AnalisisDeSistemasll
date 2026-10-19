@@ -31,6 +31,8 @@ import MisCasos from './pages/MisCasos'
 import AdminCasos from './pages/AdminCasos'
 import ServidorCaido from './components/ServidorCaido'
 import { API_BASE_URL } from './lib/api'
+  import ReporteCasos from './pages/ReporteCasos'
+   import ReporteCarga from './pages/ReporteCarga'
 
 function Inicio() {
   return (
@@ -257,6 +259,22 @@ function App() {
                 </RutaProtegida>
               }
             />
+               <Route
+     path="/admin/reporte-casos"
+     element={
+       <RutaProtegida rolRequerido="Administrador">
+         <ReporteCasos />
+       </RutaProtegida>
+     }
+   />
+   <Route
+     path="/admin/reporte-carga"
+     element={
+       <RutaProtegida rolRequerido="Administrador">
+         <ReporteCarga />
+       </RutaProtegida>
+     }
+   />
           </Routes>
         </Layout>
       </VerificadorServidor>

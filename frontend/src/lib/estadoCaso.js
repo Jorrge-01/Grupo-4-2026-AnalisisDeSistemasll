@@ -2,7 +2,7 @@ export const ETAPAS = ['Recibido', 'Con el analista', 'En trabajo', 'Resuelto']
 
 const INFO = {
   Registrada: {
-    etiqueta: 'Recibido',
+    etiqueta: 'Registrada',
     descripcion: 'Tu caso fue recibido y en breve será asignado a un analista.',
     etapa: 0,
     clase: 'bg-slate-100 text-slate-800',

@@ -25,18 +25,10 @@ namespace SistemaMuniAtiende.Controllers
 
         [HttpGet("reporte")]
         public async Task<IActionResult> Reporte(
-            [FromQuery] int pagina = 1,
-            [FromQuery] int tamano = 25,
             [FromQuery] string? rol = null,
             [FromQuery] int? aldeaId = null,
             [FromQuery] bool? activo = null)
         {
-            if (pagina < 1)
-                pagina = 1;
-
-            if (tamano < 1 || tamano > 100)
-                tamano = 25;
-
             var query =
                 from usuario in _context.Users
 
@@ -65,13 +57,11 @@ namespace SistemaMuniAtiende.Controllers
                     PerfilVecino = perfilVecino
                 };
 
-            // Filtro por rol
             if (!string.IsNullOrWhiteSpace(rol))
             {
                 query = query.Where(x => x.Rol == rol);
             }
 
-            // Filtro por aldea
             if (aldeaId.HasValue)
             {
                 query = query.Where(x =>
@@ -79,7 +69,6 @@ namespace SistemaMuniAtiende.Controllers
                     x.PerfilVecino.AldeaId == aldeaId.Value);
             }
 
-            // Filtro por estado
             if (activo.HasValue)
             {
                 query = query.Where(x =>
@@ -121,19 +110,10 @@ namespace SistemaMuniAtiende.Controllers
                 })
                 .ToListAsync();
 
-            var total = registros.Count;
-
-            var registrosPagina = registros
-                .Skip((pagina - 1) * tamano)
-                .Take(tamano)
-                .ToList();
-
             return Ok(new
             {
-                total,
-                pagina,
-                tamano,
-                registros = registrosPagina
+                total = registros.Count,
+                registros
             });
         }
 

@@ -25,8 +25,10 @@ export default function RegistrarCaso() {
     descripcion: '',
   })
 
-  const [fotos, setFotos] = useState([])       // array de { file, preview }
-  const [documento, setDocumento] = useState(null) // un solo File o null
+  const [errores, setErrores] = useState({})
+
+  const [fotos, setFotos] = useState([])
+  const [documento, setDocumento] = useState(null)
 
   useEffect(() => {
     async function cargarDatos() {
@@ -53,8 +55,18 @@ export default function RegistrarCaso() {
     cargarDatos()
   }, [])
 
+  function limpiarError(name) {
+    setErrores((p) => {
+      if (!p[name]) return p
+      const copia = { ...p }
+      delete copia[name]
+      return copia
+    })
+  }
+
   function handleChange(e) {
     const { name, value } = e.target
+    limpiarError(name)
 
     if (name === 'telefonoContacto') {
       setForm((p) => ({
@@ -91,13 +103,22 @@ export default function RegistrarCaso() {
     setError('')
     setExito('')
 
-    if (!form.areaId) return setError('Debes seleccionar el tipo de queja.')
-    if (!form.aldeaId) return setError('Debes seleccionar la aldea o comunidad.')
-    if (!form.direccion.trim()) return setError('La dirección de la queja es obligatoria.')
-    if (form.direccion.trim().length > 120) return setError('La dirección no debe exceder 120 caracteres.')
-    if (form.telefonoContacto.length !== 8) return setError('El teléfono debe tener 8 dígitos.')
-    if (!form.descripcion.trim()) return setError('La descripción de la queja es obligatoria.')
-    if (form.descripcion.trim().length > 2000) return setError('La descripción no debe exceder 2000 caracteres.')
+    const nuevosErrores = {}
+    const MSJ_01 = 'Completa este campo.'
+
+    if (!form.areaId) nuevosErrores.areaId = MSJ_01
+    if (!form.aldeaId) nuevosErrores.aldeaId = MSJ_01
+    if (!form.direccion.trim()) nuevosErrores.direccion = MSJ_01
+    if (!form.telefonoContacto) nuevosErrores.telefonoContacto = MSJ_01
+    else if (form.telefonoContacto.length !== 8) nuevosErrores.telefonoContacto = 'El teléfono debe tener 8 dígitos.'
+    if (!form.descripcion.trim()) nuevosErrores.descripcion = MSJ_01
+
+    if (Object.keys(nuevosErrores).length > 0) {
+      setErrores(nuevosErrores)
+      return
+    }
+
+    setErrores({})
 
     setGuardando(true)
 
@@ -119,7 +140,6 @@ export default function RegistrarCaso() {
       try {
         await subirEvidencia(data.id, token)
       } catch (errEvidencia) {
-        // El caso ya se registró; si falla solo la evidencia, avisamos pero no bloqueamos el éxito general
         console.error('Error al subir evidencia:', errEvidencia)
       }
 
@@ -137,7 +157,7 @@ export default function RegistrarCaso() {
     navigate('/vecino')
   }
 
-  const inputClass = 'w-full px-4 py-2.5 rounded-md border border-[var(--color-azul-piedra)]/30 bg-white text-[var(--color-tinta)] placeholder:text-[var(--color-azul-piedra)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-ocre)] transition-shadow'
+  const claseInput = (name) => `w-full px-4 py-2.5 rounded-md border ${errores[name] ? 'border-red-500' : 'border-[var(--color-azul-piedra)]/30'} bg-white text-[var(--color-tinta)] placeholder:text-[var(--color-azul-piedra)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-ocre)] transition-shadow`
   const labelClass = 'block text-sm font-medium text-[var(--color-tinta)] mb-1.5'
 
   return (
@@ -182,7 +202,7 @@ export default function RegistrarCaso() {
                     name="areaId"
                     value={form.areaId}
                     onChange={handleChange}
-                    className={inputClass}
+                    className={claseInput('areaId')}
                   >
                     <option value="">Selecciona un área</option>
                     {areas.map((area) => (
@@ -191,6 +211,9 @@ export default function RegistrarCaso() {
                       </option>
                     ))}
                   </select>
+                  {errores.areaId && (
+                    <p className="text-xs text-red-600 mt-1">{errores.areaId}</p>
+                  )}
                 </div>
 
                 <div>
@@ -201,7 +224,7 @@ export default function RegistrarCaso() {
                     name="aldeaId"
                     value={form.aldeaId}
                     onChange={handleChange}
-                    className={inputClass}
+                    className={claseInput('aldeaId')}
                   >
                     <option value="">Selecciona una opción</option>
                     {aldeas.map((aldea) => (
@@ -210,6 +233,9 @@ export default function RegistrarCaso() {
                       </option>
                     ))}
                   </select>
+                  {errores.aldeaId && (
+                    <p className="text-xs text-red-600 mt-1">{errores.aldeaId}</p>
+                  )}
                 </div>
               </div>
 
@@ -222,9 +248,12 @@ export default function RegistrarCaso() {
                   maxLength={120}
                   value={form.direccion}
                   onChange={handleChange}
-                  className={inputClass}
+                  className={claseInput('direccion')}
                   placeholder="Ej. 3a calle zona 2, frente al parque"
                 />
+                {errores.direccion && (
+                  <p className="text-xs text-red-600 mt-1">{errores.direccion}</p>
+                )}
                 <p className="text-xs text-[var(--color-tinta)]/50 mt-1">
                   {form.direccion.length}/120 caracteres
                 </p>
@@ -240,11 +269,14 @@ export default function RegistrarCaso() {
                   maxLength={8}
                   value={form.telefonoContacto}
                   onChange={handleChange}
-                  className={inputClass}
+                  className={claseInput('telefonoContacto')}
                   placeholder="Ej. 55551234"
                 />
+                {errores.telefonoContacto && (
+                  <p className="text-xs text-red-600 mt-1">{errores.telefonoContacto}</p>
+                )}
                 <p className="text-xs text-[var(--color-tinta)]/50 mt-1">
-                  Ingresa un número de teléfono de 8 dígitos.
+                 
                 </p>
               </div>
 
@@ -258,9 +290,12 @@ export default function RegistrarCaso() {
                   rows={6}
                   value={form.descripcion}
                   onChange={handleChange}
-                  className={`${inputClass} resize-y`}
+                  className={`${claseInput('descripcion')} resize-y`}
                   placeholder="Describe con claridad el problema que deseas reportar..."
                 />
+                {errores.descripcion && (
+                  <p className="text-xs text-red-600 mt-1">{errores.descripcion}</p>
+                )}
                 <p className="text-xs text-[var(--color-tinta)]/50 mt-1">
                   {form.descripcion.length}/2000 caracteres
                 </p>
