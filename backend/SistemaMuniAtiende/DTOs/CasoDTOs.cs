@@ -91,6 +91,13 @@ namespace SistemaMuniAtiende.DTOs
     string Estado
 );
 
+    public record CasoVecinoSeguimientoResponse(
+    string Tipo,
+    DateTime Fecha,
+    string Detalle
+);
+
+
     public record CasoVecinoDetalleResponse(
     int Id,
     string Codigo,
@@ -102,7 +109,8 @@ namespace SistemaMuniAtiende.DTOs
     DateTime FechaRegistro,
     string Estado,
     List<ArchivoResponse> Archivos,
-    string? SolicitudInformacion
+    string? SolicitudInformacion,
+    List<CasoVecinoSeguimientoResponse> Seguimiento
 );
 
 

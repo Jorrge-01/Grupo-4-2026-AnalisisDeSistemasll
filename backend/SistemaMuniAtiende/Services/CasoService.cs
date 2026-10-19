@@ -169,6 +169,63 @@ namespace SistemaMuniAtiende.Services
                 .Select(s => s.Mensaje)
                 .FirstOrDefaultAsync();
 
+            var seguimiento = new List<CasoVecinoSeguimientoResponse>();
+
+            seguimiento.Add(
+                new CasoVecinoSeguimientoResponse(
+                    "Caso registrado",
+                    caso.FechaRegistro,
+                    "La queja fue registrada correctamente."
+                )
+            );
+
+            var instruccion = await _context.InstruccionesTrabajo
+                .Where(i => i.CasoId == caso.Id)
+                .OrderByDescending(i => i.FechaCreacion)
+                .FirstOrDefaultAsync();
+
+            if (instruccion != null)
+            {
+                seguimiento.Add(
+                    new CasoVecinoSeguimientoResponse(
+                        "Instrucción de trabajo",
+                        instruccion.FechaCreacion,
+                        instruccion.Instruccion
+                    )
+                );
+
+                if (instruccion.FechaAsignacion.HasValue)
+                {
+                    seguimiento.Add(
+                        new CasoVecinoSeguimientoResponse(
+                            "Trabajo asignado",
+                            instruccion.FechaAsignacion.Value,
+                            "El caso fue asignado a personal municipal para su atención."
+                        )
+                    );
+                }
+            }
+
+            var trabajos = await _context.TrabajosCaso
+                .Where(t => t.CasoId == caso.Id)
+                .OrderBy(t => t.FechaRegistro)
+                .ToListAsync();
+
+            foreach (var trabajo in trabajos)
+            {
+                seguimiento.Add(
+                    new CasoVecinoSeguimientoResponse(
+                        "Trabajo realizado",
+                        trabajo.FechaRegistro,
+                        trabajo.Resultado
+                    )
+                );
+            }
+
+            seguimiento = seguimiento
+                .OrderBy(s => s.Fecha)
+                .ToList();
+
             return new CasoVecinoDetalleResponse(
                 caso.Id,
                 caso.Codigo,
@@ -180,9 +237,11 @@ namespace SistemaMuniAtiende.Services
                 caso.FechaRegistro,
                 caso.Estado.ToString(),
                 archivos,
-                solicitudInformacion
+                solicitudInformacion,
+                seguimiento
             );
         }
+
         public async Task<List<CasoAnalistaResponse>> ObtenerCasosDelAnalistaAsync(string analistaId)
         {
             return await _context.Casos
