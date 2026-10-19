@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FileText, X, MapPin, Phone, Paperclip } from 'lucide-react'
+import { FileText, X, MapPin, Phone, Paperclip, Clock, CheckCircle2 } from 'lucide-react'
 import SubidaEvidencia from './SubidaEvidencia'
 import ProgresoCaso from './ProgresoCaso'
 import { infoEstado } from '../lib/estadoCaso'
@@ -170,6 +170,50 @@ export default function DetalleCasoVecino({ casoId, onCerrar, onActualizado }) {
                   <p className="text-sm text-[var(--color-tinta)] whitespace-pre-wrap">{detalle.descripcion}</p>
                 </div>
               </div>
+
+                  {detalle.seguimiento && detalle.seguimiento.length > 0 && (
+                    <div className="pt-2">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Clock className="h-4 w-4 text-[var(--color-azul-piedra)]" />
+                        <p className="text-xs uppercase tracking-wide text-[var(--color-tinta)]/50">
+                          Seguimiento del caso
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        {detalle.seguimiento.map((evento, index) => (
+                          <div
+                            key={`${evento.tipo}-${evento.fecha}-${index}`}
+                            className="flex gap-3"
+                          >
+                            <div className="flex flex-col items-center">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100">
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              </div>
+
+                              {index < detalle.seguimiento.length - 1 && (
+                                <div className="mt-1 w-px flex-1 bg-gray-200" />
+                              )}
+                            </div>
+
+                            <div className="flex-1 pb-2">
+                              <p className="text-sm font-medium text-[var(--color-tinta)]">
+                                {evento.tipo}
+                              </p>
+
+                              <p className="mt-1 text-sm leading-5 text-[var(--color-tinta)]/70 whitespace-pre-wrap">
+                                {evento.detalle}
+                              </p>
+
+                              <p className="mt-1 text-xs text-[var(--color-tinta)]/45">
+                                {formatearFecha(evento.fecha)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
               {detalle.estado === 'PendienteInformacion' && detalle.solicitudInformacion && (
                 <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 space-y-4">
