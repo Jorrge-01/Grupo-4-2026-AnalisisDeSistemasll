@@ -3,8 +3,26 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Clock, FileText, Plus } from 'lucide-react'
 import HeaderInterno from '../components/HeaderInterno'
 import DetalleCasoVecino from '../components/DetalleCasoVecino'
-import { infoEstado } from '../lib/estadoCaso'
 import { apiFetch } from '../lib/api'
+
+function obtenerClaseEstado(estado) {
+  const mapa = {
+    Registrada: 'bg-slate-100 text-slate-800',
+    Asignada: 'bg-blue-100 text-blue-800',
+    EnValidacion: 'bg-amber-100 text-amber-800',
+    PendienteInformacion: 'bg-orange-100 text-orange-800',
+    EnAnalisis: 'bg-purple-100 text-purple-800',
+    AsignadaAOperario: 'bg-indigo-100 text-indigo-800',
+    EnEjecucion: 'bg-cyan-100 text-cyan-800',
+    TrabajoRealizado: 'bg-teal-100 text-teal-800',
+    EnVerificacion: 'bg-yellow-100 text-yellow-800',
+    Solucionada: 'bg-green-100 text-green-800',
+    Reabierta: 'bg-red-100 text-red-800',
+    Finalizada: 'bg-emerald-100 text-emerald-800',
+    NoProcedente: 'bg-gray-100 text-gray-800',
+  }
+  return mapa[estado] || 'bg-gray-100 text-gray-800'
+}
 
 function formatearFecha(fecha) {
   if (!fecha) return '-'
@@ -122,8 +140,8 @@ export default function MisCasos() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-[var(--color-tinta)]">{c.codigo}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${infoEstado(c.estado).clase}`}>
-                          {infoEstado(c.estado).etiqueta}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${obtenerClaseEstado(c.estado)}`}>
+                          {c.estado}
                         </span>
                       </div>
                       <p className="text-sm text-[var(--color-azul-piedra)] mt-0.5">{c.area}</p>
