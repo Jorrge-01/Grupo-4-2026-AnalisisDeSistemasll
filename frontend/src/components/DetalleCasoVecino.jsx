@@ -10,6 +10,48 @@ function formatearFecha(fecha) {
   return new Date(fecha).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+function GaleriaEvidencia({ titulo, archivos }) {
+  if (!archivos || archivos.length === 0) return null
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <Paperclip className="h-4 w-4 text-[var(--color-azul-piedra)]" />
+        <p className="text-xs uppercase tracking-wide text-[var(--color-tinta)]/50">
+          {titulo} ({archivos.length})
+        </p>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {archivos.map((archivo) => {
+          const esImagen = archivo.tipoContenido?.startsWith('image/')
+          return (
+            <a
+              key={archivo.id}
+              href={archivo.rutaArchivo}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block group"
+            >
+              {esImagen ? (
+                <div className="h-20 rounded-md overflow-hidden border border-[var(--color-azul-piedra)]/20 group-hover:border-[var(--color-ocre)] transition-colors">
+                  <img src={archivo.rutaArchivo} alt={archivo.nombreArchivo} className="h-full w-full object-cover" />
+                </div>
+              ) : (
+                <div className="h-20 rounded-md border border-[var(--color-azul-piedra)]/20 bg-white/50 flex flex-col items-center justify-center gap-1 px-1 group-hover:border-[var(--color-ocre)] transition-colors">
+                  <FileText className="h-5 w-5 text-[var(--color-ocre)]" />
+                  <span className="text-[10px] text-[var(--color-tinta)] text-center truncate max-w-full">
+                    {archivo.nombreArchivo}
+                  </span>
+                </div>
+              )}
+            </a>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function DetalleCasoVecino({ casoId, onCerrar, onActualizado }) {
   const [detalle, setDetalle] = useState(null)
   const [cargandoDetalle, setCargandoDetalle] = useState(true)
@@ -133,15 +175,18 @@ export default function DetalleCasoVecino({ casoId, onCerrar, onActualizado }) {
             </div>
 
             <div className="px-6 py-4 overflow-y-auto space-y-4">
-              <div className="rounded-lg border border-[var(--color-azul-piedra)]/15 bg-white/50 p-4 space-y-4">
-                <ProgresoCaso etapa={infoEstado(detalle.estado).etapa} />
-                <div className="text-center space-y-1">
+              {infoEstado(detalle.estado).etapa >= 0 ? (
+                <div className="rounded-lg border border-[var(--color-azul-piedra)]/15 bg-white/50 px-4 py-3">
+                  <ProgresoCaso etapa={infoEstado(detalle.estado).etapa} />
+                </div>
+              ) : (
+                <div className="rounded-lg border border-[var(--color-azul-piedra)]/15 bg-white/50 p-4 text-center space-y-1">
                   <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${infoEstado(detalle.estado).clase}`}>
                     {infoEstado(detalle.estado).etiqueta}
                   </span>
                   <p className="text-sm text-[var(--color-tinta)]/80">{infoEstado(detalle.estado).descripcion}</p>
                 </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -187,8 +232,8 @@ export default function DetalleCasoVecino({ casoId, onCerrar, onActualizado }) {
                             className="flex gap-3"
                           >
                             <div className="flex flex-col items-center">
-                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100">
-                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-verde-institucional)]/10">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-[var(--color-verde-institucional)]" />
                               </div>
 
                               {index < detalle.seguimiento.length - 1 && (
@@ -276,43 +321,15 @@ export default function DetalleCasoVecino({ casoId, onCerrar, onActualizado }) {
                 </div>
               )}
 
-              {detalle.archivos && detalle.archivos.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Paperclip className="h-4 w-4 text-[var(--color-azul-piedra)]" />
-                    <p className="text-xs uppercase tracking-wide text-[var(--color-tinta)]/50">
-                      Evidencia adjunta ({detalle.archivos.length})
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {detalle.archivos.map((archivo) => {
-                      const esImagen = archivo.tipoContenido?.startsWith('image/')
-                      return (
-                        <a
-                          key={archivo.id}
-                          href={archivo.rutaArchivo}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block group"
-                        >
-                          {esImagen ? (
-                            <div className="h-20 rounded-md overflow-hidden border border-[var(--color-azul-piedra)]/20 group-hover:border-[var(--color-ocre)] transition-colors">
-                              <img src={archivo.rutaArchivo} alt={archivo.nombreArchivo} className="h-full w-full object-cover" />
-                            </div>
-                          ) : (
-                            <div className="h-20 rounded-md border border-[var(--color-azul-piedra)]/20 bg-white/50 flex flex-col items-center justify-center gap-1 px-1 group-hover:border-[var(--color-ocre)] transition-colors">
-                              <FileText className="h-5 w-5 text-[var(--color-ocre)]" />
-                              <span className="text-[10px] text-[var(--color-tinta)] text-center truncate max-w-full">
-                                {archivo.nombreArchivo}
-                              </span>
-                            </div>
-                          )}
-                        </a>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
+              <GaleriaEvidencia
+                titulo="Evidencia que adjuntaste"
+                archivos={(detalle.archivos || []).filter((a) => !a.esEvidenciaTrabajo)}
+              />
+
+              <GaleriaEvidencia
+                titulo="Evidencia del trabajo realizado"
+                archivos={(detalle.archivos || []).filter((a) => a.esEvidenciaTrabajo)}
+              />
 
               <p className="text-xs text-[var(--color-tinta)]/50 pt-2 border-t border-[var(--color-azul-piedra)]/10">
                 Registrado el {formatearFecha(detalle.fechaRegistro)}

@@ -156,10 +156,27 @@ namespace SistemaMuniAtiende.Services
             if (caso == null)
                 return null;
 
-            var archivos = await _context.ArchivosCaso
+            var trabajoAprobado = caso.Estado == EstadoCaso.Solucionada || caso.Estado == EstadoCaso.Finalizada;
+            var trabajoEnVerificacion = trabajoAprobado || caso.Estado == EstadoCaso.EnVerificacion;
+
+            var ultimaCorreccion = await _context.SolicitudesCorreccionTrabajo
+                .AsNoTracking()
+                .Where(c => c.CasoId == caso.Id)
+                .OrderByDescending(c => c.FechaSolicitud)
+                .Select(c => (DateTime?)c.FechaSolicitud)
+                .FirstOrDefaultAsync();
+
+            var archivosCaso = await _context.ArchivosCaso
+                .AsNoTracking()
                 .Where(a => a.CasoId == caso.Id)
-                .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido, a.SubidoPorUserId != null))
                 .ToListAsync();
+
+            var archivos = archivosCaso
+                .Where(a =>
+                    a.SubidoPorUserId == null ||
+                    (trabajoAprobado && (ultimaCorreccion == null || a.FechaCarga > ultimaCorreccion.Value)))
+                .Select(a => new ArchivoResponse(a.Id, a.NombreArchivo, a.RutaArchivo, a.TipoContenido, a.SubidoPorUserId != null))
+                .ToList();
 
             var solicitudInformacion = await _context.SolicitudesInformacionCaso
                 .Where(s =>
@@ -175,11 +192,12 @@ namespace SistemaMuniAtiende.Services
                 new CasoVecinoSeguimientoResponse(
                     "Caso registrado",
                     caso.FechaRegistro,
-                    "La queja fue registrada correctamente."
+                    "Recibimos tu caso correctamente."
                 )
             );
 
             var instruccion = await _context.InstruccionesTrabajo
+                .AsNoTracking()
                 .Where(i => i.CasoId == caso.Id)
                 .OrderByDescending(i => i.FechaCreacion)
                 .FirstOrDefaultAsync();
@@ -188,9 +206,9 @@ namespace SistemaMuniAtiende.Services
             {
                 seguimiento.Add(
                     new CasoVecinoSeguimientoResponse(
-                        "Instrucción de trabajo",
+                        "Caso analizado",
                         instruccion.FechaCreacion,
-                        instruccion.Instruccion
+                        "El analista revisó tu caso y preparó las indicaciones para atenderlo."
                     )
                 );
 
@@ -200,26 +218,33 @@ namespace SistemaMuniAtiende.Services
                         new CasoVecinoSeguimientoResponse(
                             "Trabajo asignado",
                             instruccion.FechaAsignacion.Value,
-                            "El caso fue asignado a personal municipal para su atención."
+                            "Tu caso fue asignado a personal municipal para su atención."
                         )
                     );
                 }
             }
 
-            var trabajos = await _context.TrabajosCaso
-                .Where(t => t.CasoId == caso.Id)
-                .OrderBy(t => t.FechaRegistro)
-                .ToListAsync();
-
-            foreach (var trabajo in trabajos)
+            if (trabajoEnVerificacion)
             {
-                seguimiento.Add(
-                    new CasoVecinoSeguimientoResponse(
-                        "Trabajo realizado",
-                        trabajo.FechaRegistro,
-                        trabajo.Resultado
-                    )
-                );
+                var fechaTrabajo = await _context.TrabajosCaso
+                    .AsNoTracking()
+                    .Where(t => t.CasoId == caso.Id)
+                    .OrderByDescending(t => t.FechaRegistro)
+                    .Select(t => (DateTime?)t.FechaRegistro)
+                    .FirstOrDefaultAsync();
+
+                if (fechaTrabajo.HasValue)
+                {
+                    seguimiento.Add(
+                        new CasoVecinoSeguimientoResponse(
+                            "Trabajo realizado",
+                            fechaTrabajo.Value,
+                            trabajoAprobado
+                                ? "El personal municipal realizó el trabajo y fue verificado."
+                                : "El personal municipal realizó el trabajo y se encuentra en verificación."
+                        )
+                    );
+                }
             }
 
             seguimiento = seguimiento
