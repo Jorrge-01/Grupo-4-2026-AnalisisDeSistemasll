@@ -26,11 +26,7 @@ namespace SistemaMuniAtiende.Controllers
             _cache = cache;
         }
 
-        // =========================================================
-        // GET: api/Aldeas
-        // GET: api/Aldeas?soloActivas=true
-        // GET: api/Aldeas?soloActivas=false
-        // =========================================================
+        
         [HttpGet]
         public async Task<IActionResult> Listar(
             [FromQuery] bool soloActivas = true)
@@ -60,9 +56,7 @@ namespace SistemaMuniAtiende.Controllers
             return Ok(aldeas);
         }
 
-        // =========================================================
-        // POST: api/Aldeas
-        // =========================================================
+       
         [HttpPost]
         [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> Crear(
@@ -104,9 +98,7 @@ namespace SistemaMuniAtiende.Controllers
             return Ok(aldea);
         }
 
-        // =========================================================
-        // PUT: api/Aldeas/5
-        // =========================================================
+        
         [HttpPut("{id:int}")]
         [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> Actualizar(
@@ -156,9 +148,7 @@ namespace SistemaMuniAtiende.Controllers
             return Ok(aldea);
         }
 
-        // =========================================================
-        // DELETE: api/Aldeas/5
-        // =========================================================
+        
         [HttpDelete("{id:int}")]
         [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> Eliminar(int id)
@@ -197,9 +187,7 @@ namespace SistemaMuniAtiende.Controllers
             });
         }
 
-        // =========================================================
-        // CACHE
-        // =========================================================
+        
         private void InvalidarCache()
         {
             _cache.Remove($"{CachePrefix}True");

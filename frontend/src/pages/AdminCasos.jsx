@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ClipboardList, Clock, CheckCircle2, AlertCircle, Search, X, MapPin, Phone ,History } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import HeaderInterno from '../components/HeaderInterno'
 import EvidenciaCaso from '../components/EvidenciaCaso'
+import GraficosCasos from '../components/GraficosCasos'
 import { apiFetch } from '../lib/api'
 
 const ESTADOS_ACTIVOS = ['Asignada', 'EnValidacion', 'PendienteInformacion', 'EnAnalisis', 'AsignadaAOperario', 'EnEjecucion', 'TrabajoRealizado', 'EnVerificacion', 'Reabierta']
@@ -64,7 +64,11 @@ export default function AdminCasos() {
 
   const [filtroEstado, setFiltroEstado] = useState('Todos')
   const [filtroArea, setFiltroArea] = useState('Todos')
+  const [filtroAldea, setFiltroAldea] = useState('Todos')
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [personal, setPersonal] = useState([])
 
   const [casoSeleccionadoId, setCasoSeleccionadoId] = useState(null)
   const [detalle, setDetalle] = useState(null)
@@ -84,6 +88,14 @@ export default function AdminCasos() {
           headers: { Authorization: `Bearer ${token}` },
         })
         setCasos(data)
+        try {
+          const carga = await apiFetch('/api/reportes/carga-personal', {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          setPersonal(carga.registros || [])
+        } catch {
+          setPersonal([])
+        }
       } catch (err) {
         setError(err.message || 'No se pudieron cargar los casos.')
       } finally {
@@ -139,34 +151,44 @@ export default function AdminCasos() {
     setSolucion(null)
   }
 
+  const areasDisponibles = useMemo(() => {
+    return [...new Set(casos.map((c) => c.area))].sort()
+  }, [casos])
+
+  const aldeasDisponibles = useMemo(() => {
+    return [...new Set(casos.map((c) => c.aldea))].sort()
+  }, [casos])
+
+  const casosBase = useMemo(() => {
+    const desde = fechaDesde ? new Date(`${fechaDesde}T00:00:00`) : null
+    const hasta = fechaHasta ? new Date(`${fechaHasta}T23:59:59`) : null
+    return casos.filter((c) => {
+      if (filtroEstado !== 'Todos' && c.estado !== filtroEstado) return false
+      if (filtroArea !== 'Todos' && c.area !== filtroArea) return false
+      if (filtroAldea !== 'Todos' && c.aldea !== filtroAldea) return false
+      const fecha = new Date(c.fechaRegistro)
+      if (desde && fecha < desde) return false
+      if (hasta && fecha > hasta) return false
+      return true
+    })
+  }, [casos, filtroEstado, filtroArea, filtroAldea, fechaDesde, fechaHasta])
+
+  const hayFiltros = filtroEstado !== 'Todos' || filtroArea !== 'Todos' || filtroAldea !== 'Todos' || fechaDesde || fechaHasta
+
+  function limpiarFiltros() {
+    setFiltroEstado('Todos')
+    setFiltroArea('Todos')
+    setFiltroAldea('Todos')
+    setFechaDesde('')
+    setFechaHasta('')
+  }
+
   const totalCasos = casos.length
   const totalActivos = casos.filter((c) => ESTADOS_ACTIVOS.includes(c.estado)).length
   const totalResueltos = casos.filter((c) => ESTADOS_RESUELTOS.includes(c.estado)).length
   const totalPendientesInfo = casos.filter((c) => c.estado === 'PendienteInformacion').length
 
-  const datosPorEstado = useMemo(() => {
-    return ESTADOS_ORDEN
-      .map((estado) => ({ estado, cantidad: casos.filter((c) => c.estado === estado).length }))
-      .filter((d) => d.cantidad > 0)
-  }, [casos])
-
-  const datosPorArea = useMemo(() => {
-    const conteo = {}
-    casos.forEach((c) => {
-      conteo[c.area] = (conteo[c.area] || 0) + 1
-    })
-    return Object.entries(conteo)
-      .map(([area, cantidad]) => ({ area, cantidad }))
-      .sort((a, b) => b.cantidad - a.cantidad)
-  }, [casos])
-
-  const areasDisponibles = useMemo(() => {
-    return [...new Set(casos.map((c) => c.area))].sort()
-  }, [casos])
-
-  const casosFiltrados = casos.filter((c) => {
-    if (filtroEstado !== 'Todos' && c.estado !== filtroEstado) return false
-    if (filtroArea !== 'Todos' && c.area !== filtroArea) return false
+  const casosFiltrados = casosBase.filter((c) => {
     if (busqueda.trim()) {
       const texto = busqueda.trim().toLowerCase()
       return c.codigo.toLowerCase().includes(texto) || c.descripcion.toLowerCase().includes(texto)
@@ -228,41 +250,11 @@ export default function AdminCasos() {
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-6 mb-8">
-              <div className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-5">
-                <p className="text-sm font-semibold text-[var(--color-tinta)] mb-4">Casos por estado</p>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={datosPorEstado} margin={{ top: 4, right: 8, left: -16, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.08)" />
-                    <XAxis dataKey="estado" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={70} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Bar dataKey="cantidad" radius={[4, 4, 0, 0]}>
-                      {datosPorEstado.map((entry) => (
-                        <Cell key={entry.estado} fill={ESTADO_COLORES[entry.estado] || '#94a3b8'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 p-5">
-                <p className="text-sm font-semibold text-[var(--color-tinta)] mb-4">Casos por área</p>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={datosPorArea} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(0,0,0,0.08)" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="area" tick={{ fontSize: 11 }} width={110} />
-                    <Tooltip />
-                    <Bar dataKey="cantidad" fill="var(--color-ocre)" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            <GraficosCasos casos={casos} estadosOrden={ESTADOS_ORDEN} estadoColores={ESTADO_COLORES} personal={personal} />
 
             <div className="bg-[var(--color-piedra-clara)] rounded-lg border border-[var(--color-azul-piedra)]/15 overflow-hidden">
-              <div className="flex flex-wrap items-center gap-3 p-4 border-b border-[var(--color-azul-piedra)]/15">
-                <div className="relative flex-1 min-w-[180px]">
+              <div className="p-4 border-b border-[var(--color-azul-piedra)]/15">
+                <div className="relative">
                   <Search className="h-4 w-4 text-[var(--color-tinta)]/40 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
@@ -272,28 +264,56 @@ export default function AdminCasos() {
                     className="w-full pl-9 pr-3 py-2 rounded-md border border-[var(--color-azul-piedra)]/20 bg-white text-sm outline-none focus:ring-2 focus:ring-[var(--color-ocre)]/30"
                   />
                 </div>
-
-                <select
-                  value={filtroEstado}
-                  onChange={(e) => setFiltroEstado(e.target.value)}
-                  className="px-3 py-2 rounded-md border border-[var(--color-azul-piedra)]/20 bg-white text-sm outline-none focus:ring-2 focus:ring-[var(--color-ocre)]/30"
-                >
-                  <option value="Todos">Todos los estados</option>
-                  {ESTADOS_ORDEN.map((estado) => (
-                    <option key={estado} value={estado}>{estado}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={filtroArea}
-                  onChange={(e) => setFiltroArea(e.target.value)}
-                  className="px-3 py-2 rounded-md border border-[var(--color-azul-piedra)]/20 bg-white text-sm outline-none focus:ring-2 focus:ring-[var(--color-ocre)]/30"
-                >
-                  <option value="Todos">Todas las áreas</option>
-                  {areasDisponibles.map((area) => (
-                    <option key={area} value={area}>{area}</option>
-                  ))}
-                </select>
+                <div className="flex flex-wrap items-end gap-3 mt-3">
+                  <div>
+                    <label className="block text-xs uppercase tracking-wide text-[var(--color-tinta)]/50 mb-1">Estado</label>
+                    <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} className="px-3 py-2 rounded-md border border-[var(--color-azul-piedra)]/20 bg-white text-sm outline-none focus:ring-2 focus:ring-[var(--color-ocre)]/30">
+                      <option value="Todos">Todos los estados</option>
+                      {ESTADOS_ORDEN.map((estado) => (
+                        <option key={estado} value={estado}>{estado}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-wide text-[var(--color-tinta)]/50 mb-1">Área</label>
+                    <select value={filtroArea} onChange={(e) => setFiltroArea(e.target.value)} className="px-3 py-2 rounded-md border border-[var(--color-azul-piedra)]/20 bg-white text-sm outline-none focus:ring-2 focus:ring-[var(--color-ocre)]/30">
+                      <option value="Todos">Todas las áreas</option>
+                      {areasDisponibles.map((area) => (
+                        <option key={area} value={area}>{area}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-wide text-[var(--color-tinta)]/50 mb-1">Aldea</label>
+                    <select value={filtroAldea} onChange={(e) => setFiltroAldea(e.target.value)} className="px-3 py-2 rounded-md border border-[var(--color-azul-piedra)]/20 bg-white text-sm outline-none focus:ring-2 focus:ring-[var(--color-ocre)]/30">
+                      <option value="Todos">Todas las aldeas</option>
+                      {aldeasDisponibles.map((aldea) => (
+                        <option key={aldea} value={aldea}>{aldea}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-wide text-[var(--color-tinta)]/50 mb-1">Desde</label>
+                    <input type="date" value={fechaDesde} max={fechaHasta || undefined} onChange={(e) => setFechaDesde(e.target.value)} className="px-3 py-2 rounded-md border border-[var(--color-azul-piedra)]/20 bg-white text-sm outline-none focus:ring-2 focus:ring-[var(--color-ocre)]/30" />
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-wide text-[var(--color-tinta)]/50 mb-1">Hasta</label>
+                    <input type="date" value={fechaHasta} min={fechaDesde || undefined} onChange={(e) => setFechaHasta(e.target.value)} className="px-3 py-2 rounded-md border border-[var(--color-azul-piedra)]/20 bg-white text-sm outline-none focus:ring-2 focus:ring-[var(--color-ocre)]/30" />
+                  </div>
+                  {hayFiltros && (
+                    <button
+                      type="button"
+                      onClick={limpiarFiltros}
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium text-[var(--color-azul-piedra)] bg-[var(--color-azul-piedra)]/10 hover:bg-[var(--color-azul-piedra)]/20 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                      Limpiar filtros
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-[var(--color-tinta)]/50 mt-3">
+                  Mostrando {casosFiltrados.length} de {casos.length} casos. Estos filtros solo afectan a la tabla.
+                </p>
               </div>
 
               {casosFiltrados.length === 0 ? (

@@ -33,6 +33,7 @@ import ServidorCaido from './components/ServidorCaido'
 import { API_BASE_URL } from './lib/api'
   import ReporteCasos from './pages/ReporteCasos'
    import ReporteCarga from './pages/ReporteCarga'
+   import ConfigurarGraficos from './pages/ConfigurarGraficos'
 
 function Inicio() {
   return (
@@ -233,6 +234,15 @@ function App() {
                 </RutaProtegida>
               }
             />
+
+            <Route
+  path="/admin/casos/graficos"
+  element={
+    <RutaProtegida rolRequerido="Administrador">
+      <ConfigurarGraficos />
+    </RutaProtegida>
+  }
+/>
 
             <Route
               path="/empleado"
