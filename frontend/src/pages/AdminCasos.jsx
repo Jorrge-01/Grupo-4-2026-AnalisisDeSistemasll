@@ -201,12 +201,20 @@ export default function AdminCasos() {
       <HeaderInterno titulo="Gestión de casos" />
 
       <main className="max-w-6xl mx-auto px-6 py-10">
-        <button
-          onClick={() => navigate('/admin')}
-          className="text-sm text-[var(--color-azul-piedra)] hover:text-[var(--color-ocre)] transition-colors mb-6"
-        >
-          ← Volver al panel
-        </button>
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <button
+            onClick={() => navigate('/admin')}
+            className="text-sm text-[var(--color-azul-piedra)] hover:text-[var(--color-ocre)] transition-colors"
+          >
+            ← Volver al panel
+          </button>
+          <button
+            onClick={() => navigate('/admin/monitor')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium text-white bg-[var(--color-verde-institucional)] hover:opacity-90 transition-opacity"
+          >
+            Monitor en tiempo real
+          </button>
+        </div>
 
         {error && (
           <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-4">{error}</p>

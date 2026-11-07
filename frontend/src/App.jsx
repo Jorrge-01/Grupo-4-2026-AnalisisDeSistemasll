@@ -5,6 +5,7 @@ import Hero from './components/Hero'
 import Autoridades from './components/Autoridades'
 import InfoGeneral from './components/InfoGeneral'
 import MisionVision from './components/MisionVision'
+import MonitorCasos from './pages/MonitorCasos'
 import Footer from './components/Footer'
 import Login from './pages/Login'
 import Registro from './pages/Registro'
@@ -252,6 +253,16 @@ function App() {
                 </RutaProtegida>
               }
             />
+
+
+            <Route
+  path="/admin/monitor"
+  element={
+    <RutaProtegida rolRequerido="Administrador">
+      <MonitorCasos />
+    </RutaProtegida>
+  }
+/>
             
             <Route
               path="/empleado/casos/:id"
